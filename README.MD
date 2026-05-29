@@ -23,11 +23,27 @@ Magisk is an open-source suite for Android customization with systemless root, m
 
 ## <img src="./asset/icon2.gif" width="48px" /> Highlights
 
+- Systemless root and Android customization.
+- Magisk module support for extending device behavior.
+- Zygisk support for process-level runtime extensions.
+- Boot image patching and related installation tooling.
+- Open-source development based on the official Magisk project.
+
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
 </p>
 
 ## Downloads
+
+Download APKs and release artifacts from:
+
+- [GitHub Releases](https://github.com/Anto426/Magisk/releases)
+
+For installation steps, follow the official Magisk installation guide linked below.
+
+<p align="center">
+  <img src="./asset/divider.gif" width="440" height="40" />
+</p>
 
 ## <img src="./asset/icon2.gif" width="48px" /> Screenshots
 
@@ -40,8 +56,6 @@ Magisk is an open-source suite for Android customization with systemless root, m
   <img src="./asset/images/Screenshot_20260425-024317_Magisk.png" alt="Screenshot 6" width="240" />
   <img src="./asset/images/Screenshot_20260425-024420_Magisk.png" alt="Screenshot 7" width="240" />
 </p>
-
-[GitHub Releases](https://github.com/anto426/Magisk/releases).
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
@@ -58,7 +72,7 @@ Magisk is an open-source suite for Android customization with systemless root, m
   <img src="./asset/divider.gif" width="440" height="40" />
 </p>
 
-## <img src="./asset/icon3.gif" width="48px" /> Building And Development
+## <img src="./asset/icon3.gif" width="48px" /> Building and Development
 
 ### Setup Environment
 
@@ -176,7 +190,7 @@ Create a wrapper Cargo bin directory:
 
 Then set **Settings > Rust > Toolchain location** to that wrapper path.
 
-### Signing And Distribution
+### Signing and Distribution
 
 In release builds, the certificate used to sign the Magisk APK is used by Magisk's root daemon as a trusted reference. If another Magisk app is signed with a different key, it can be rejected and force-uninstalled to protect users from unverified packages.
 
@@ -229,7 +243,7 @@ Add translations in:
 ## <img src="./asset/icon4.gif" width="48px" /> License
 
 ```text
-Magisk, including all git submodules are free software:
+Magisk, including all git submodules, is free software:
 you can redistribute it and/or modify it under the terms of the
 GNU General Public License as published by the Free Software Foundation,
 either version 3 of the License, or (at your option) any later version.
