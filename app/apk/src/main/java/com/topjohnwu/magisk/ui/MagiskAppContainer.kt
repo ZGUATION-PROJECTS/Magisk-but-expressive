@@ -1,5 +1,7 @@
 package com.topjohnwu.magisk.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -20,21 +22,19 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation3.ui.NavDisplay
+import androidx.navigation3.runtime.entryProvider
 import com.topjohnwu.magisk.navigation.AppNavigationConfig
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.navigation.AppRouteSpec
-import com.topjohnwu.magisk.navigation.rememberMagiskNavController
+import com.topjohnwu.magisk.navigation.AppNavigator
+import com.topjohnwu.magisk.navigation.rememberAppNavigator
 import com.topjohnwu.magisk.ui.component.MagiskContentColumn
 import com.topjohnwu.magisk.ui.component.MagiskEmptyState
 import com.topjohnwu.magisk.ui.component.MagiskSnackbarHost
@@ -44,26 +44,26 @@ import com.topjohnwu.magisk.ui.theme.MagiskTheme
 @Composable
 fun MagiskAppContainer(
     openSection: String? = null,
-    navController: NavHostController = rememberMagiskNavController(),
+    backStack: SnapshotStateList<AppRoute> = remember { mutableStateListOf(AppRoute.Home) },
     overlay: @Composable () -> Unit = {}
 ) {
+    val navigator = rememberAppNavigator(backStack)
+
     MagiskTheme {
         LaunchedEffect(openSection) {
             val route = AppNavigationConfig.routeFromSection(openSection)
             if (route != AppNavigationConfig.startRoute) {
-                navController.navigate(AppNavigationConfig.routeString(route)) {
-                    launchSingleTop = true
-                    restoreState = true
-                }
+                navigator.navigateTopLevel(route)
             }
         }
 
+        BackHandler(enabled = backStack.size > 1) {
+            navigator.navigateBack()
+        }
+
         val snackbarHostState = remember { SnackbarHostState() }
-        val backStackEntry by navController.currentBackStackEntryAsState()
-        val currentDestination = backStackEntry?.destination
-        val currentSpec = AppNavigationConfig.routes.firstOrNull { spec ->
-            currentDestination?.hierarchy?.any { it.route == spec.graphKey } == true
-        } ?: AppNavigationConfig.specFor(AppNavigationConfig.startRoute)
+        val currentRoute = backStack.lastOrNull() ?: AppRoute.Home
+        val currentSpec = AppNavigationConfig.specFor(currentRoute)
 
         Scaffold(
             topBar = {
@@ -72,14 +72,14 @@ fun MagiskAppContainer(
             bottomBar = {
                 MagiskNavigationBar(
                     currentSpec = currentSpec,
-                    navController = navController
+                    navigator = navigator
                 )
             },
             snackbarHost = { MagiskSnackbarHost(snackbarHostState) },
             containerColor = MaterialTheme.colorScheme.background
         ) { innerPadding ->
-            MagiskNavHost(
-                navController = navController,
+            MagiskNavDisplay(
+                backStack = backStack,
                 innerPadding = innerPadding
             )
         }
@@ -88,27 +88,38 @@ fun MagiskAppContainer(
 }
 
 @Composable
-private fun MagiskNavHost(
-    navController: NavHostController,
+private fun MagiskNavDisplay(
+    backStack: SnapshotStateList<AppRoute>,
     innerPadding: PaddingValues
 ) {
-    NavHost(
-        navController = navController,
-        startDestination = AppNavigationConfig.startGraphKey,
-        modifier = Modifier.padding(innerPadding)
-    ) {
-        AppNavigationConfig.routes.forEach { spec ->
-            composable(spec.graphKey) {
-                MagiskRouteSlot(spec = spec)
-            }
+    val entryProvider = remember {
+        entryProvider {
+            entry<AppRoute.Home> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.Home)) }
+            entry<AppRoute.Superuser> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.Superuser)) }
+            entry<AppRoute.Modules> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.Modules)) }
+            entry<AppRoute.Logs> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.Logs)) }
+            entry<AppRoute.Settings> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.Settings)) }
+            entry<AppRoute.Install> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.Install)) }
+            entry<AppRoute.DenyList> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.DenyList)) }
+            entry<AppRoute.Theme> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.Theme)) }
+            entry<AppRoute.Flash> { route -> MagiskRouteSlot(AppNavigationConfig.specFor(route)) }
+            entry<AppRoute.ModuleAction> { route -> MagiskRouteSlot(AppNavigationConfig.specFor(route)) }
         }
+    }
+
+    Box(modifier = Modifier.padding(innerPadding)) {
+        NavDisplay(
+            backStack = backStack,
+            onBack = { backStack.removeLastOrNull() },
+            entryProvider = entryProvider
+        )
     }
 }
 
 @Composable
 private fun MagiskNavigationBar(
     currentSpec: AppRouteSpec,
-    navController: NavHostController
+    navigator: AppNavigator
 ) {
     NavigationBar {
         AppNavigationConfig.topLevelRoutes.forEach { spec ->
@@ -116,13 +127,7 @@ private fun MagiskNavigationBar(
             NavigationBarItem(
                 selected = selected,
                 onClick = {
-                    navController.navigate(AppNavigationConfig.routeString(spec.route)) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    navigator.navigateTopLevel(spec.route)
                 },
                 icon = {
                     Icon(

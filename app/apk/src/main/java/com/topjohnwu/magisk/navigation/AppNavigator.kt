@@ -2,38 +2,38 @@ package com.topjohnwu.magisk.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.navigation.NavHostController
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.mutableStateListOf
 
 class AppNavigator internal constructor(
-    private val navController: NavHostController
+    private val backStack: SnapshotStateList<AppRoute>
 ) {
 
     fun navigate(route: AppRoute) {
-        navController.navigate(AppNavigationConfig.routeString(route)) {
-            launchSingleTop = true
+        if (backStack.lastOrNull() != route) {
+            backStack.add(route)
         }
     }
 
     fun navigateTopLevel(route: AppRoute) {
-        navController.navigate(AppNavigationConfig.routeString(route)) {
-            popUpTo(AppNavigationConfig.startGraphKey) {
-                saveState = true
-            }
-            launchSingleTop = true
-            restoreState = true
-        }
+        backStack.clear()
+        backStack.add(route)
     }
 
     fun navigateBack(): Boolean {
-        return navController.popBackStack()
+        if (backStack.size > 1) {
+            backStack.removeLast()
+            return true
+        }
+        return false
     }
 }
 
 @Composable
 fun rememberAppNavigator(
-    navController: NavHostController = rememberMagiskNavController()
+    backStack: SnapshotStateList<AppRoute> = remember { mutableStateListOf(AppRoute.Home) }
 ): AppNavigator {
-    return remember(navController) {
-        AppNavigator(navController)
+    return remember(backStack) {
+        AppNavigator(backStack)
     }
 }

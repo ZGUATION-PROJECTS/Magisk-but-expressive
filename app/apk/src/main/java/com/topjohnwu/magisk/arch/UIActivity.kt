@@ -1,9 +1,9 @@
 package com.topjohnwu.magisk.arch
 
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
 import com.topjohnwu.magisk.core.base.ActivityExtension
 
-abstract class UIActivity<T> : AppCompatActivity() {
+abstract class UIActivity<T> : ComponentActivity() {
     abstract val extension: ActivityExtension
 
     fun withPermission(permission: String, callback: (Boolean) -> Unit) {

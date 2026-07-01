@@ -17,9 +17,9 @@ import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import android.content.res.Configuration
+import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -79,27 +79,30 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.topjohnwu.magisk.core.R as CoreR
 
-class SuRequestActivity : AppCompatActivity(), UntrackedActivity {
+class SuRequestActivity : ComponentActivity(), UntrackedActivity {
 
     private val extension = ActivityExtension(this)
     private val viewModel: SuRequestViewModel by viewModels { VMFactory }
 
-    init {
-        val nightMode = if (Config.darkTheme == Config.Value.DARK_THEME_AMOLED) {
-            AppCompatDelegate.MODE_NIGHT_YES
-        } else {
-            Config.darkTheme
-        }
-        AppCompatDelegate.setDefaultNightMode(nightMode)
-    }
-
     override fun attachBaseContext(base: Context) {
-        super.attachBaseContext(base.wrap())
+        val nightMode = if (Config.darkTheme == Config.Value.DARK_THEME_AMOLED) {
+            Configuration.UI_MODE_NIGHT_YES
+        } else {
+            when (Config.darkTheme) {
+                -1 -> base.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+                0 -> Configuration.UI_MODE_NIGHT_NO
+                else -> Configuration.UI_MODE_NIGHT_YES
+            }
+        }
+        val config = Configuration(base.resources.configuration).apply {
+            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or nightMode
+        }
+        super.attachBaseContext(base.createConfigurationContext(config).wrap())
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         extension.onCreate(savedInstanceState)
-        supportRequestWindowFeature(Window.FEATURE_NO_TITLE)
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LOCKED
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

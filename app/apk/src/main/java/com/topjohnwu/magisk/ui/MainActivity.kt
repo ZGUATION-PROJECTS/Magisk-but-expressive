@@ -7,9 +7,9 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import android.widget.Toast
+import android.content.res.Configuration
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -42,28 +42,24 @@ class MainActivity : UIActivity<Unit>(), SplashScreenHost {
     internal val showUnsupported = MutableStateFlow<List<Pair<Int, Int>>>(emptyList())
     internal val showShortcutPrompt = MutableStateFlow(false)
 
-    init {
-        val nightMode = if (Config.darkTheme == Config.Value.DARK_THEME_AMOLED) {
-            AppCompatDelegate.MODE_NIGHT_YES
-        } else {
-            Config.darkTheme
-        }
-        AppCompatDelegate.setDefaultNightMode(nightMode)
-    }
-
     override fun attachBaseContext(base: Context) {
-        super.attachBaseContext(base.wrap())
+        val nightMode = if (Config.darkTheme == Config.Value.DARK_THEME_AMOLED) {
+            Configuration.UI_MODE_NIGHT_YES
+        } else {
+            when (Config.darkTheme) {
+                -1 -> base.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+                0 -> Configuration.UI_MODE_NIGHT_NO
+                else -> Configuration.UI_MODE_NIGHT_YES
+            }
+        }
+        val config = Configuration(base.resources.configuration).apply {
+            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or nightMode
+        }
+        super.attachBaseContext(base.createConfigurationContext(config).wrap())
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         extension.onCreate(savedInstanceState)
-        if (isRunningAsStub) {
-            val delegate = delegate
-            val clz = delegate.javaClass
-            clz.reflectField("mActivityHandlesConfigFlagsChecked").set(delegate, true)
-            clz.reflectField("mActivityHandlesConfigFlags").set(delegate, 0)
-        }
-
         splashController.preOnCreate()
         super.onCreate(savedInstanceState)
         splashController.onCreate(savedInstanceState)
