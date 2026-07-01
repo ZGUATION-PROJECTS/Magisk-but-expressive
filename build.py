@@ -147,7 +147,8 @@ def run_ndk_build(cmds: list[str]):
     cmds.append("NDK_PROJECT_PATH=.")
     cmds.append("NDK_APPLICATION_MK=src/Application.mk")
     cmds.append(f"APP_ABI={' '.join(build_abis.keys())}")
-    cmds.append(f"-j{cpu_count}")
+    jobs = os.environ.get("MAGISK_NDK_JOBS", "1" if is_windows else str(cpu_count))
+    cmds.append(f"-j{jobs}")
     if args.verbose > 1:
         cmds.append("V=1")
     if not args.release:

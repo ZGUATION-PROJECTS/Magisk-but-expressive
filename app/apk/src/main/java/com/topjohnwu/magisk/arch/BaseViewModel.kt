@@ -1,32 +1,36 @@
 package com.topjohnwu.magisk.arch
 
 import android.os.Bundle
-import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
-import com.topjohnwu.magisk.core.AppContext
-import com.topjohnwu.magisk.core.ktx.toast
-import com.topjohnwu.magisk.ui.navigation.Route
-import kotlinx.coroutines.flow.MutableSharedFlow
+import com.topjohnwu.magisk.navigation.AppRoute
 import kotlinx.coroutines.flow.SharedFlow
 
 abstract class BaseViewModel : ViewModel() {
 
-    private val _navEvents = MutableSharedFlow<Route>(extraBufferCapacity = 1)
-    val navEvents: SharedFlow<Route> = _navEvents
+    private val effectEmitter = UiEffectEmitter()
+    val effects: SharedFlow<UiEffect> = effectEmitter.effects
 
     open fun onSaveState(state: Bundle) {}
     open fun onRestoreState(state: Bundle) {}
 
-    fun showSnackbar(@StringRes resId: Int) {
-        AppContext.toast(resId, Toast.LENGTH_SHORT)
+    protected fun sendEffect(effect: UiEffect) {
+        effectEmitter.tryEmit(effect)
     }
 
-    fun showSnackbar(msg: String) {
-        AppContext.toast(msg, Toast.LENGTH_SHORT)
+    protected suspend fun emitEffect(effect: UiEffect) {
+        effectEmitter.emit(effect)
     }
 
-    fun navigateTo(route: Route) {
-        _navEvents.tryEmit(route)
+    fun showMessage(@StringRes resId: Int, vararg args: Any) {
+        sendEffect(UiEffect.Message(uiText(resId, *args)))
+    }
+
+    fun showMessage(message: String) {
+        sendEffect(UiEffect.Message(uiText(message)))
+    }
+
+    fun navigateTo(route: AppRoute) {
+        sendEffect(UiEffect.Navigate(route))
     }
 }

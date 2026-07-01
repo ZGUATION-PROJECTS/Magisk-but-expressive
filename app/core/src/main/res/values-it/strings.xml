@@ -48,6 +48,11 @@
     <string name="patch_file_msg">Seleziona un\'immagine in formato .img, un file .tar di ODIN o un file payload.bin</string>
     <string name="reboot_delay_toast">Riavvio fra 5 secondi…</string>
     <string name="flash_screen_title">Installazione</string>
+    <string name="flash_invalid_uri">URI non valido</string>
+    <string name="flash_copy_to_cache_failed">Impossibile copiare nella cache</string>
+    <string name="flash_extract_failed">Impossibile estrarre i file</string>
+    <string name="flash_installation_failed">Installazione non riuscita</string>
+    <string name="flash_installing_file">- Installazione di %1$s</string>
 
     <!--Superuser-->
     <string name="su_request_title">Richiesta di accesso root</string>
@@ -127,6 +132,7 @@
     <string name="suspend_text_zygisk">Modulo sospeso perché %1$s non è abilitato</string>
     <string name="zygisk_module_unloaded">Modulo Zygisk non caricato a causa di incompatibilità</string>
     <string name="module_empty">Nessun modulo installato</string>
+    <string name="module_log_fallback">modulo</string>
 
     <!--Settings -->
     <string name="confirm_install">Vuoi installare il modulo %1$s?</string>
@@ -252,5 +258,24 @@
     <string name="app_not_found">Non è stata trovata un\'app per gestire questa azione</string>
     <string name="reboot_apply_change">Riavvia per applicare le modifiche</string>
     <string name="restore_app_confirmation">L\'app nascosta verrà sostituita con la versione originale. Sei sicuro di voler continuare?</string>
-
+    <string name="settings_header_subtitle">Configura l\'ambiente e l\'app</string>
+    <string name="copied_to_clipboard">Copiato negli appunti</string>
+    <string name="shared_uid_label">[SharedUID] %1$s</string>
+    <string name="isolated_process_label">(isolato) %1$s</string>
+    <string name="saved_to_path">Salvato in: %1$s</string>
+    <string name="waiting_for_logs">In attesa dei log...</string>
+    <string name="root_required_operation">L\'accesso root è richiesto per questa operazione</string>
+    <string name="apply">Applica</string>
+    <string name="edit">Modifica</string>
+    <string name="theme_mode">Modalità</string>
+    <string name="theme_appearance">Aspetto</string>
+    <string name="theme_custom_themes">Temi personalizzati</string>
+    <string name="theme_option_ruby">Ruby Hoshino</string>
+    <string name="theme_option_memcho">Mem-Cho</string>
+    <string name="theme_option_aqua">Aqua</string>
+    <string name="theme_option_sung_jinwoo">Sung Jin-Woo</string>
+    <string name="theme_option_default_dynamic">Predefinito (dinamico)</string>
+    <string name="theme_option_default_automatic">Predefinito (automatico)</string>
+    <string name="theme_option_custom">Personalizzato</string>
+    <string name="settings_search">Cerca impostazioni</string>
 </resources>

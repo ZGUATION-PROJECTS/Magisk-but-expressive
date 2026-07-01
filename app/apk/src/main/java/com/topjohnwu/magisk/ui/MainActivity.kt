@@ -5,25 +5,17 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
-import android.content.res.Resources
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
-import android.os.Build
 import android.os.Bundle
-import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.core.content.pm.ShortcutManagerCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import com.topjohnwu.magisk.R
+import com.topjohnwu.magisk.arch.POST_NOTIFICATIONS_PERMISSION
 import com.topjohnwu.magisk.arch.UIActivity
 import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.core.Const
@@ -36,22 +28,16 @@ import com.topjohnwu.magisk.core.ktx.reflectField
 import com.topjohnwu.magisk.core.ktx.toast
 import com.topjohnwu.magisk.core.tasks.AppMigration
 import com.topjohnwu.magisk.core.wrap
-import com.topjohnwu.magisk.ui.flash.FlashUtils
-import com.topjohnwu.magisk.ui.navigation.Navigator
-import com.topjohnwu.magisk.ui.navigation.Route
-import com.topjohnwu.magisk.ui.theme.Theme
-import com.topjohnwu.magisk.ui.theme.enableMaterial3ExpressiveFlags
 import com.topjohnwu.magisk.view.Shortcuts
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import com.topjohnwu.magisk.core.R as CoreR
 
-class MainActivity : UIActivity<Any>(), SplashScreenHost {
+class MainActivity : UIActivity<Unit>(), SplashScreenHost {
 
     override val extension = ActivityExtension(this)
     override val splashController = SplashController(this)
 
-    private val intentState = MutableStateFlow(0)
     internal val showInvalidState = MutableStateFlow(false)
     internal val showUnsupported = MutableStateFlow<List<Pair<Int, Int>>>(emptyList())
     internal val showShortcutPrompt = MutableStateFlow(false)
@@ -70,7 +56,6 @@ class MainActivity : UIActivity<Any>(), SplashScreenHost {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableMaterial3ExpressiveFlags()
         extension.onCreate(savedInstanceState)
         if (isRunningAsStub) {
             val delegate = delegate
@@ -79,12 +64,9 @@ class MainActivity : UIActivity<Any>(), SplashScreenHost {
             clz.reflectField("mActivityHandlesConfigFlags").set(delegate, 0)
         }
 
-        setTheme(R.style.Theme_Foundation)
         splashController.preOnCreate()
         super.onCreate(savedInstanceState)
         splashController.onCreate(savedInstanceState)
-
-        setupWindow()
     }
 
     override fun onResume() {
@@ -97,42 +79,7 @@ class MainActivity : UIActivity<Any>(), SplashScreenHost {
         extension.onSaveInstanceState(outState)
     }
 
-    private fun setupWindow() {
-        val darkMode = resolvedDarkTheme()
-        window.setBackgroundDrawable(ColorDrawable(Theme.selected.windowBackgroundColor(darkMode)))
-
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = !darkMode
-            isAppearanceLightNavigationBars = !darkMode
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            window.decorView.post {
-                val bottomInset = WindowInsetsCompat.toWindowInsetsCompat(
-                    window.decorView.rootWindowInsets,
-                    window.decorView
-                ).getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
-
-                if (bottomInset < Resources.getSystem().displayMetrics.density * 40) {
-                    @Suppress("DEPRECATION")
-                    run {
-                        window.navigationBarColor = Color.TRANSPARENT
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                            window.navigationBarDividerColor = Color.TRANSPARENT
-                        }
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            window.isNavigationBarContrastEnforced = false
-                            window.isStatusBarContrastEnforced = false
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     @SuppressLint("InlinedApi")
-    @Suppress("DEPRECATION")
     override fun onCreateUi(savedInstanceState: Bundle?) {
         showUnsupportedMessage()
         askForHomeShortcut()
@@ -143,44 +90,18 @@ class MainActivity : UIActivity<Any>(), SplashScreenHost {
             }
         }
 
-        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-
-        val section = if (intent.action == Intent.ACTION_APPLICATION_PREFERENCES) {
+        enableEdgeToEdge()
+        val openRoute = if (intent.action == Intent.ACTION_APPLICATION_PREFERENCES) {
             Const.Nav.SETTINGS
         } else {
             intent.getStringExtra(Const.Key.OPEN_SECTION)
         }
 
         setContent {
-            val darkMode = resolvedDarkTheme(androidx.compose.foundation.isSystemInDarkTheme())
-            MagiskAppContainer(
-                useDynamicColor = Theme.shouldUseDynamicColor,
-                darkTheme = darkMode,
-                openSection = section
-            )
-            MainActivityDialogs(activity = this@MainActivity)
-        }
-    }
-
-    @Composable
-    private fun HandleFlashIntent(navigator: Navigator) {
-        val intentVersion by intentState.collectAsStateWithLifecycle()
-        LaunchedEffect(intentVersion) {
-            val currentIntent = intent ?: return@LaunchedEffect
-            if (currentIntent.action == FlashUtils.INTENT_FLASH) {
-                val action = currentIntent.getStringExtra(FlashUtils.EXTRA_FLASH_ACTION)
-                    ?: return@LaunchedEffect
-                val uri = currentIntent.getStringExtra(FlashUtils.EXTRA_FLASH_URI)
-                navigator.push(Route.Flash(action, uri))
-                currentIntent.action = null
+            MagiskAppContainer(openSection = openRoute) {
+                MainActivityDialogs(activity = this@MainActivity)
             }
         }
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        intentState.value += 1
     }
 
     @SuppressLint("InlinedApi")
@@ -229,21 +150,12 @@ class MainActivity : UIActivity<Any>(), SplashScreenHost {
     }
 
     private fun askForHomeShortcut() {
-        if (isRunningAsStub && !Config.askedHome &&
-            ShortcutManagerCompat.isRequestPinShortcutSupported(this)
+        if (isRunningAsStub &&
+            !Config.askedHome &&
+            androidx.core.content.pm.ShortcutManagerCompat.isRequestPinShortcutSupported(this)
         ) {
             Config.askedHome = true
             showShortcutPrompt.value = true
-        }
-    }
-
-    private fun resolvedDarkTheme(systemDark: Boolean = false): Boolean {
-        return when (Config.darkTheme) {
-            AppCompatDelegate.MODE_NIGHT_YES,
-            Config.Value.DARK_THEME_AMOLED -> true
-
-            AppCompatDelegate.MODE_NIGHT_NO -> false
-            else -> systemDark
         }
     }
 }
@@ -254,53 +166,53 @@ private fun MainActivityDialogs(activity: MainActivity) {
     val unsupportedMessages by activity.showUnsupported.collectAsStateWithLifecycle()
     val showShortcut by activity.showShortcutPrompt.collectAsStateWithLifecycle()
 
-    val invalidDialog = com.topjohnwu.magisk.ui.component.rememberConfirmDialog(
-        onConfirm = {
-            activity.showInvalidState.value = false
-            activity.handleInvalidStateInstall()
-        },
-        onDismiss = {}
-    )
-
-    LaunchedEffect(showInvalid) {
-        if (showInvalid) {
-            invalidDialog.showConfirm(
-                title = activity.getString(CoreR.string.unsupport_nonroot_stub_title),
-                content = activity.getString(CoreR.string.unsupport_nonroot_stub_msg),
-                confirm = activity.getString(CoreR.string.install),
+    if (showInvalid) {
+        com.topjohnwu.magisk.ui.component.MagiskDialog(
+            title = activity.getString(CoreR.string.unsupport_nonroot_stub_title),
+            text = activity.getString(CoreR.string.unsupport_nonroot_stub_msg),
+            onDismissRequest = {},
+            confirmAction = com.topjohnwu.magisk.ui.component.MagiskDialogAction(
+                text = activity.getString(CoreR.string.install),
+                onClick = {
+                    activity.showInvalidState.value = false
+                    activity.handleInvalidStateInstall()
+                }
             )
-        }
+        )
     }
 
-    for ((index, pair) in unsupportedMessages.withIndex()) {
-        val (titleRes, msgRes) = pair
-        val show = rememberSaveable { androidx.compose.runtime.mutableStateOf(true) }
-        com.topjohnwu.magisk.ui.component.rememberConfirmDialog(
-            onConfirm = { show.value = false },
-        ).also { dialog ->
-            LaunchedEffect(Unit) {
-                dialog.showConfirm(
-                    title = activity.getString(titleRes),
-                    content = activity.getString(msgRes),
+    unsupportedMessages.forEachIndexed { index, pair ->
+        val show = rememberSaveable(index) { androidx.compose.runtime.mutableStateOf(true) }
+        if (show.value) {
+            val (titleRes, msgRes) = pair
+            com.topjohnwu.magisk.ui.component.MagiskDialog(
+                title = activity.getString(titleRes),
+                text = activity.getString(msgRes),
+                onDismissRequest = { show.value = false },
+                confirmAction = com.topjohnwu.magisk.ui.component.MagiskDialogAction(
+                    text = activity.getString(android.R.string.ok),
+                    onClick = { show.value = false }
                 )
-            }
+            )
         }
     }
 
-    val shortcutDialog = com.topjohnwu.magisk.ui.component.rememberConfirmDialog(
-        onConfirm = {
-            activity.showShortcutPrompt.value = false
-            Shortcuts.addHomeIcon(activity)
-        },
-        onDismiss = { activity.showShortcutPrompt.value = false }
-    )
-
-    LaunchedEffect(showShortcut) {
-        if (showShortcut) {
-            shortcutDialog.showConfirm(
-                title = activity.getString(CoreR.string.add_shortcut_title),
-                content = activity.getString(CoreR.string.add_shortcut_msg),
+    if (showShortcut) {
+        com.topjohnwu.magisk.ui.component.MagiskDialog(
+            title = activity.getString(CoreR.string.add_shortcut_title),
+            text = activity.getString(CoreR.string.add_shortcut_msg),
+            onDismissRequest = { activity.showShortcutPrompt.value = false },
+            confirmAction = com.topjohnwu.magisk.ui.component.MagiskDialogAction(
+                text = activity.getString(android.R.string.ok),
+                onClick = {
+                    activity.showShortcutPrompt.value = false
+                    Shortcuts.addHomeIcon(activity)
+                }
+            ),
+            dismissAction = com.topjohnwu.magisk.ui.component.MagiskDialogAction(
+                text = activity.getString(android.R.string.cancel),
+                onClick = { activity.showShortcutPrompt.value = false }
             )
-        }
+        )
     }
 }

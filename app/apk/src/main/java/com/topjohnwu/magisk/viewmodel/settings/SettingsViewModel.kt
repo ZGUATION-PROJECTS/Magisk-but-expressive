@@ -1,0 +1,302 @@
+package com.topjohnwu.magisk.viewmodel.settings
+
+import android.os.Build
+import androidx.annotation.StringRes
+import androidx.core.content.pm.ShortcutManagerCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.topjohnwu.magisk.arch.UiEffect
+import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.arch.uiText
+import com.topjohnwu.magisk.core.AppContext
+import com.topjohnwu.magisk.core.BuildConfig
+import com.topjohnwu.magisk.core.Config
+import com.topjohnwu.magisk.core.Const
+import com.topjohnwu.magisk.core.Info
+import com.topjohnwu.magisk.core.isRunningAsStub
+import com.topjohnwu.magisk.core.tasks.AppMigration
+import com.topjohnwu.magisk.core.utils.LocaleSetting
+import com.topjohnwu.magisk.core.utils.MediaStoreUtils
+import com.topjohnwu.magisk.core.utils.RootUtils
+import com.topjohnwu.magisk.ui.theme.ThemeOption
+import com.topjohnwu.magisk.view.Shortcuts
+import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import com.topjohnwu.magisk.core.R as CoreR
+
+data class SettingsUiState(
+    val darkThemeMode: Int = Config.darkTheme,
+    val themeOrdinal: Int = Config.themeOrdinal,
+    val selectedThemeIndex: Int = ThemeOption.displayOrder.indexOf(ThemeOption.selected).coerceAtLeast(0),
+    @param:StringRes val themeNameRes: Int = ThemeOption.selected.labelRes,
+    val useLocaleManager: Boolean = LocaleSetting.useLocaleManager,
+    val languageSystemName: String = LocaleSetting.instance.appLocale?.let { it.getDisplayName(it) }
+        ?: AppContext.getString(CoreR.string.system_default),
+    val languageIndex: Int = LocaleSetting.available.tags.indexOf(Config.locale)
+        .let { if (it < 0) 0 else it },
+    val languageName: String = LocaleSetting.available.names.getOrElse(
+        LocaleSetting.available.tags.indexOf(Config.locale).let { if (it < 0) 0 else it }
+    ) { AppContext.getString(CoreR.string.system_default) },
+    val canAddShortcut: Boolean = isRunningAsStub &&
+        ShortcutManagerCompat.isRequestPinShortcutSupported(AppContext),
+    val canMigrateApp: Boolean = Info.env.isActive && Const.USER_ID == 0,
+    val isHiddenApp: Boolean = AppContext.packageName != BuildConfig.APP_PACKAGE_NAME,
+    val checkUpdate: Boolean = Config.checkUpdate,
+    val updateChannel: Int = Config.updateChannel,
+    val isCustomChannel: Boolean = Config.updateChannel == Config.Value.CUSTOM_CHANNEL,
+    val updateChannelName: String = AppContext.resources.getStringArray(CoreR.array.update_channel)
+        .getOrElse(Config.updateChannel) { "-" },
+    val customChannelUrl: String = Config.customChannelUrl,
+    val doh: Boolean = Config.doh,
+    val downloadDir: String = Config.downloadDir,
+    val downloadDirPath: String = MediaStoreUtils.fullPath(Config.downloadDir),
+    val randName: Boolean = Config.randName,
+    val zygisk: Boolean = Config.zygisk,
+    val zygiskMismatch: Boolean = Config.zygisk != Info.isZygiskEnabled,
+    val denyList: Boolean = Config.denyList,
+    val showMagisk: Boolean = Info.env.isActive,
+    val showMagiskAdvanced: Boolean = Info.env.isActive && Const.Version.atLeast_24_0(),
+    val showDenyListConfig: Boolean = Const.Version.atLeast_24_0(),
+    val showSuperuser: Boolean = Info.showSuperUser,
+    val deviceSecure: Boolean = Info.isDeviceSecure,
+    val suTapjack: Boolean = Config.suTapjack,
+    val suAuth: Boolean = Config.suAuth,
+    val hideTapjackOnSPlus: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
+    val rootMode: Int = Config.rootMode,
+    val accessModeName: String = AppContext.resources.getStringArray(CoreR.array.su_access)
+        .getOrElse(Config.rootMode) { "-" },
+    val suMultiuserMode: Int = Config.suMultiuserMode,
+    val multiuserModeName: String = AppContext.resources.getStringArray(CoreR.array.multiuser_mode)
+        .getOrElse(Config.suMultiuserMode) { "-" },
+    val multiuserModeEnabled: Boolean = Const.USER_ID == 0,
+    val multiuserSummary: String = AppContext.resources.getStringArray(CoreR.array.multiuser_summary)
+        .getOrElse(Config.suMultiuserMode) { "-" },
+    val suMntNamespaceMode: Int = Config.suMntNamespaceMode,
+    val mountNamespaceName: String = AppContext.resources.getStringArray(CoreR.array.namespace)
+        .getOrElse(Config.suMntNamespaceMode) { "-" },
+    val mountNamespaceSummary: String = AppContext.resources.getStringArray(CoreR.array.namespace_summary)
+        .getOrElse(Config.suMntNamespaceMode) { "-" },
+    val suAutoResponse: Int = Config.suAutoResponse,
+    val autoResponseName: String = AppContext.resources.getStringArray(CoreR.array.auto_response)
+        .getOrElse(Config.suAutoResponse) { "-" },
+    val suTimeoutIndex: Int = SU_TIMEOUT_VALUES.indexOf(Config.suDefaultTimeout)
+        .let { if (it < 0) 0 else it },
+    val requestTimeoutName: String = AppContext.resources.getStringArray(CoreR.array.request_timeout)
+        .getOrElse(SU_TIMEOUT_VALUES.indexOf(Config.suDefaultTimeout).let { if (it < 0) 0 else it }) { "-" },
+    val suNotification: Int = Config.suNotification,
+    val suNotificationName: String = AppContext.resources.getStringArray(CoreR.array.su_notification)
+        .getOrElse(Config.suNotification) { "-" },
+    val suReAuth: Boolean = Config.suReAuth,
+    val showReauthenticate: Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.O,
+    val suRestrict: Boolean = Config.suRestrict,
+    val showRestrict: Boolean = Const.Version.atLeast_30_1()
+)
+
+class SettingsViewModel : ViewModel() {
+    private val _state = MutableStateFlow(snapshotState())
+    val state: StateFlow<SettingsUiState> = _state.asStateFlow()
+
+    private val _messages = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
+    val messages: SharedFlow<UiText> = _messages.asSharedFlow()
+
+    private val _effects = MutableSharedFlow<UiEffect>(extraBufferCapacity = 8)
+    val effects: SharedFlow<UiEffect> = _effects.asSharedFlow()
+
+    private var refreshJob: Job? = null
+
+    fun refreshState() {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch { updateSnapshot() }
+    }
+
+    fun setDarkMode(mode: Int) {
+        Config.darkTheme = mode
+        updateSnapshot()
+    }
+
+    fun setThemeIndex(index: Int) {
+        val option = ThemeOption.displayOrder.getOrNull(index) ?: ThemeOption.Default
+        Config.themeOrdinal = if (option == ThemeOption.Default) -1 else option.ordinal
+        updateSnapshot()
+    }
+
+    fun setLanguageByIndex(index: Int) {
+        if (_state.value.useLocaleManager) return
+        val tags = LocaleSetting.available.tags
+        if (tags.isEmpty()) return
+        Config.locale = tags[index.coerceIn(0, tags.lastIndex)]
+        updateSnapshot()
+    }
+
+    fun addShortcut() {
+        runCatching {
+            Shortcuts.addHomeIcon(AppContext)
+            updateSnapshot()
+        }.onFailure {
+            _messages.tryEmit(uiText(CoreR.string.failure))
+        }
+    }
+
+    fun requestHideApp(label: String) {
+        val safeLabel = label.trim()
+        if (safeLabel.isBlank() || safeLabel.length > AppMigration.MAX_LABEL_LENGTH) {
+            _messages.tryEmit(uiText(CoreR.string.failure))
+            return
+        }
+        _effects.tryEmit(UiEffect.RequestHideApp(safeLabel))
+    }
+
+    fun requestRestoreApp() {
+        _effects.tryEmit(UiEffect.RequestRestoreApp)
+    }
+
+    fun onAppMigrationResult(success: Boolean) {
+        if (!success) {
+            _messages.tryEmit(uiText(CoreR.string.failure))
+        }
+        updateSnapshot()
+    }
+
+    fun setCheckUpdate(value: Boolean) {
+        Config.checkUpdate = value
+        updateSnapshot()
+    }
+
+    fun setUpdateChannel(channel: Int) {
+        Config.updateChannel = channel
+        Info.resetUpdate()
+        updateSnapshot()
+    }
+
+    fun setCustomChannelUrl(url: String) {
+        Config.customChannelUrl = url
+        Info.resetUpdate()
+        updateSnapshot()
+    }
+
+    fun setDoH(value: Boolean) {
+        Config.doh = value
+        updateSnapshot()
+    }
+
+    fun setDownloadDir(value: String) {
+        Config.downloadDir = value
+        updateSnapshot()
+    }
+
+    fun setRandName(value: Boolean) {
+        Config.randName = value
+        updateSnapshot()
+    }
+
+    fun createSystemlessHosts() {
+        viewModelScope.launch {
+            val ok = RootUtils.addSystemlessHosts()
+            _messages.tryEmit(uiText(if (ok) CoreR.string.settings_hosts_toast else CoreR.string.failure))
+        }
+    }
+
+    fun setZygisk(value: Boolean) {
+        Config.zygisk = value
+        updateSnapshot()
+        if (value != Info.isZygiskEnabled) {
+            _messages.tryEmit(uiText(CoreR.string.reboot_apply_change))
+        }
+    }
+
+    fun setDenyList(value: Boolean) {
+        viewModelScope.launch {
+            val cmd = if (value) "enable" else "disable"
+            val ok = withContext(Dispatchers.IO) {
+                Shell.cmd("magisk --denylist $cmd").exec().isSuccess
+            }
+            if (ok) {
+                Config.denyList = value
+            } else {
+                _messages.emit(uiText(CoreR.string.failure))
+            }
+            updateSnapshot()
+        }
+    }
+
+    fun setRootMode(value: Int) {
+        Config.rootMode = value
+        updateSnapshot()
+    }
+
+    fun setSuMultiuserMode(value: Int) {
+        Config.suMultiuserMode = value
+        updateSnapshot()
+    }
+
+    fun setSuMntNamespaceMode(value: Int) {
+        Config.suMntNamespaceMode = value
+        updateSnapshot()
+    }
+
+    fun setSuAuth(value: Boolean) {
+        Config.suAuth = value
+        updateSnapshot()
+    }
+
+    fun setSuAutoResponse(value: Int) {
+        Config.suAutoResponse = value
+        updateSnapshot()
+    }
+
+    fun setSuTimeoutIndex(index: Int) {
+        Config.suDefaultTimeout = SU_TIMEOUT_VALUES[index.coerceIn(0, SU_TIMEOUT_VALUES.lastIndex)]
+        updateSnapshot()
+    }
+
+    fun setSuNotification(value: Int) {
+        Config.suNotification = value
+        updateSnapshot()
+    }
+
+    fun setSuReAuth(value: Boolean) {
+        Config.suReAuth = value
+        updateSnapshot()
+    }
+
+    fun setSuTapjack(value: Boolean) {
+        Config.suTapjack = value
+        updateSnapshot()
+    }
+
+    fun setSuRestrict(value: Boolean) {
+        Config.suRestrict = value
+        updateSnapshot()
+    }
+
+    fun setMessageRes(res: Int) {
+        _messages.tryEmit(uiText(res))
+    }
+
+    private fun snapshotState(): SettingsUiState = SettingsUiState()
+
+    private fun updateSnapshot() {
+        _state.value = snapshotState()
+    }
+
+    companion object {
+        val Factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return SettingsViewModel() as T
+            }
+        }
+    }
+}
+
+val SU_TIMEOUT_VALUES = listOf(10, 15, 20, 30, 45, 60)
