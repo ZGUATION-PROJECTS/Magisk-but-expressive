@@ -114,6 +114,10 @@
     <string name="logs_cleared">Log successfully cleared</string>
     <string name="save_log">Save log</string>
     <string name="clear_log">Clear log</string>
+    <string name="copy_log_line">Copy line</string>
+    <string name="copy_log_entry">Copy log</string>
+    <string name="expand_log">Expand log</string>
+    <string name="collapse_log">Collapse log</string>
     <string name="log_save_summary">Export the log file to storage</string>
     <string name="log_clear_summary">Clear the current history</string>
     <string name="refresh_log">Refresh log</string>
@@ -186,6 +190,8 @@
     <string name="module_updates_install_all">Update all</string>
     <string name="module_updates_install_one">Update</string>
     <string name="module_updates_latest_version">Latest: %1$s</string>
+    <string name="module_updates_ready_summary">Ready to install</string>
+    <string name="module_updates_installed_count">Installed modules: %1$d</string>
     <string name="module_updates_confirm_all_title">Update all modules?</string>
     <string name="module_updates_confirm_all">Install updates for %1$d modules?</string>
     <string name="module_update_failed">Failed: %1$s</string>

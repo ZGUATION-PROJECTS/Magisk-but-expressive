@@ -1,6 +1,5 @@
 package com.topjohnwu.magisk.ui.superuser
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -66,6 +65,9 @@ import com.topjohnwu.magisk.ui.component.MagiskSearchField
 import com.topjohnwu.magisk.ui.component.MagiskSwitchItem
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
 import com.topjohnwu.magisk.ui.component.card.MagiskActionCard
+import com.topjohnwu.magisk.ui.motion.MagiskAnimatedVisibility
+import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
+import com.topjohnwu.magisk.ui.motion.MagiskMotionEngine
 import com.topjohnwu.magisk.view.SystemToastManager
 import com.topjohnwu.magisk.viewmodel.superuser.SuperuserViewModel
 import com.topjohnwu.magisk.core.R as CoreR
@@ -94,7 +96,7 @@ fun SuperuserScreen(
         MagiskLoadingState(modifier = modifier)
     } else {
         Column(modifier = modifier.fillMaxSize()) {
-            AnimatedVisibility(visible = state.searchVisible) {
+            MagiskAnimatedVisibility(visible = state.searchVisible) {
                 MagiskSearchField(
                     value = state.searchQuery,
                     onValueChange = viewModel::setSearchQuery,
@@ -120,8 +122,12 @@ fun SuperuserScreen(
                         val item = state.filteredItems[index]
                         val isActive =
                             item.policy == SuPolicy.ALLOW || item.policy == SuPolicy.RESTRICT
+                        val alphaAnimation = MagiskMotionEngine.tweenSpec<Float>(
+                            MagiskMotionDuration.Short
+                        )
                         val alpha by animateFloatAsState(
                             targetValue = if (isActive) 1f else 0.65f,
+                            animationSpec = alphaAnimation,
                             label = "SuCardAlpha"
                         )
                         MagiskExpandableListItem(
@@ -318,7 +324,14 @@ fun MagiskTriStateSwitch(
         SuPolicy.ALLOW -> 44.dp
         else -> 0.dp
     }
-    val animatedOffset by animateDpAsState(targetValue = targetOffset, label = "ThumbOffset")
+    val offsetAnimation = MagiskMotionEngine.tweenSpec<androidx.compose.ui.unit.Dp>(
+        MagiskMotionDuration.Short
+    )
+    val animatedOffset by animateDpAsState(
+        targetValue = targetOffset,
+        animationSpec = offsetAnimation,
+        label = "ThumbOffset"
+    )
 
     val trackColor = when (policy) {
         SuPolicy.DENY -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)

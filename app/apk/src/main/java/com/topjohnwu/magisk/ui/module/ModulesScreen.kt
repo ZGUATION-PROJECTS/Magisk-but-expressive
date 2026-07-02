@@ -2,7 +2,6 @@ package com.topjohnwu.magisk.ui.module
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -74,6 +73,9 @@ import com.topjohnwu.magisk.ui.component.MagiskSearchField
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
 import com.topjohnwu.magisk.ui.component.card.MagiskCard
 import com.topjohnwu.magisk.ui.component.card.MagiskWarningCard
+import com.topjohnwu.magisk.ui.motion.MagiskAnimatedVisibility
+import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
+import com.topjohnwu.magisk.ui.motion.MagiskMotionEngine
 import com.topjohnwu.magisk.view.SystemToastManager
 import com.topjohnwu.magisk.viewmodel.module.ModuleUiItem
 import com.topjohnwu.magisk.viewmodel.module.ModuleViewModel
@@ -129,11 +131,17 @@ fun ModulesScreen(
             icon = Icons.Rounded.SystemUpdate,
             onDismissRequest = { pendingUpdateModule = null },
             confirmAction = MagiskDialogAction(
-                text = stringResource(android.R.string.ok), onClick = {
+                text = stringResource(android.R.string.ok), onClick = onConfirm@{
+                    val zipUrl = updateModule.zipUrl.trim().takeIf(String::isNotBlank)
+                    if (zipUrl == null) {
+                        pendingUpdateModule = null
+                        viewModel.postMessageRes(CoreR.string.failure)
+                        return@onConfirm
+                    }
                     pendingUpdateModule = null
                     onNavigate(
                         AppRoute.Flash(
-                            action = Const.Value.FLASH_ZIP, additionalData = updateModule.zipUrl
+                            action = Const.Value.FLASH_ZIP, additionalData = zipUrl
                         )
                     )
                 }),
@@ -147,7 +155,7 @@ fun ModulesScreen(
         MagiskLoadingState(modifier = modifier.fillMaxSize())
     } else {
         Column(modifier = modifier.fillMaxSize()) {
-            AnimatedVisibility(visible = state.searchVisible) {
+            MagiskAnimatedVisibility(visible = state.searchVisible) {
                 MagiskSearchField(
                     value = state.searchQuery,
                     onValueChange = viewModel::setSearchQuery,
@@ -183,8 +191,12 @@ fun ModulesScreen(
                         key = { index -> state.filteredModules[index].id }) { index ->
                         val item = state.filteredModules[index]
                         val isActive = item.enabled && !item.removed
+                        val alphaAnimation = MagiskMotionEngine.tweenSpec<Float>(
+                            MagiskMotionDuration.Short
+                        )
                         val alpha by animateFloatAsState(
                             targetValue = if (isActive) 1f else 0.65f,
+                            animationSpec = alphaAnimation,
                             label = "ModuleCardAlpha"
                         )
                         MagiskExpandableListItem(

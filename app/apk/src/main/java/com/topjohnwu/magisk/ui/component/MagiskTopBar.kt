@@ -3,17 +3,14 @@ package com.topjohnwu.magisk.ui.component
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -35,6 +32,7 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,11 +41,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.util.lerp
 import com.github.yohannestz.iconsax_compose.iconsax.Iconsax
+import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
+import com.topjohnwu.magisk.ui.motion.MagiskMotionEngine
 
 data class MagiskTopBarAction(
     val icon: ImageVector,
@@ -93,6 +97,7 @@ fun MagiskTopBar(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     subtitleContent: (@Composable () -> Unit)? = null,
+    compactTitle: Boolean = false,
     showNavigationIcon: Boolean = false,
     onNavigationClick: (() -> Unit)? = null,
     scrollBehavior: TopAppBarScrollBehavior? = null,
@@ -101,24 +106,14 @@ fun MagiskTopBar(
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val collapsedFraction = scrollBehavior?.state?.collapsedFraction ?: 0f
-    val expandedFontSize = 32.sp
-    val collapsedFontSize = 22.sp
-    val fontSize by animateFloatAsState(
-        targetValue = lerp(
-            expandedFontSize.value,
-            collapsedFontSize.value,
-            collapsedFraction
-        ),
-        label = "fontSizeAnimation"
-    )
 
     LargeFlexibleTopAppBar(
         modifier = modifier,
         title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge.copy(fontSize = fontSize.sp),
-                fontWeight = FontWeight.SemiBold
+            MagiskTopBarTitle(
+                title = title,
+                compactTitle = compactTitle,
+                collapsedFraction = collapsedFraction
             )
         },
         subtitle = subtitleContent ?: subtitle?.let {
@@ -149,6 +144,51 @@ fun MagiskTopBar(
         scrollBehavior = scrollBehavior
     )
 
+}
+
+@Composable
+private fun MagiskTopBarTitle(
+    title: String,
+    compactTitle: Boolean,
+    collapsedFraction: Float
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val density = LocalDensity.current
+        val textMeasurer = rememberTextMeasurer()
+        val baseStyle = MaterialTheme.typography.titleLarge.copy(fontSize = 32.sp)
+        val availableWidth = with(density) { maxWidth.roundToPx() }
+        val measuredOverflow by remember(title, availableWidth, baseStyle, compactTitle) {
+            derivedStateOf {
+                compactTitle || textMeasurer.measure(
+                    text = title,
+                    style = baseStyle,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    constraints = Constraints(maxWidth = availableWidth)
+                ).hasVisualOverflow
+            }
+        }
+        val expandedFontSize = if (measuredOverflow) 22.sp else 32.sp
+        val collapsedFontSize = if (measuredOverflow) 18.sp else 22.sp
+        val fontAnimation = MagiskMotionEngine.tweenSpec<Float>(MagiskMotionDuration.Short)
+        val fontSize by animateFloatAsState(
+            targetValue = lerp(
+                expandedFontSize.value,
+                collapsedFontSize.value,
+                collapsedFraction
+            ),
+            animationSpec = fontAnimation,
+            label = "fontSizeAnimation"
+        )
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge.copy(fontSize = fontSize.sp),
+            fontWeight = FontWeight.SemiBold,
+            maxLines = if (measuredOverflow) 2 else 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }
 
 @Composable
@@ -193,11 +233,11 @@ fun MagiskTopBarIconButton(
             contentColor = MaterialTheme.colorScheme.onSurface
         )
     ) {
+        val iconTransform = MagiskMotionEngine.iconTransform()
         AnimatedContent(
             targetState = icon,
             transitionSpec = {
-                (fadeIn() + scaleIn(initialScale = 0.82f)) togetherWith
-                        (fadeOut() + scaleOut(targetScale = 0.82f))
+                iconTransform
             },
             label = "MagiskTopBarIconTransition"
         ) { imageVector ->
@@ -222,10 +262,12 @@ private fun MagiskTopBarActionButton(
         actionVisible.value = true
     }
 
+    val enter = MagiskMotionEngine.scaleEnter()
+    val exit = MagiskMotionEngine.scaleExit()
     AnimatedVisibility(
         visible = actionVisible.value,
-        enter = fadeIn() + scaleIn(),
-        exit = fadeOut() + scaleOut()
+        enter = enter,
+        exit = exit
     ) {
         Box(modifier = Modifier.padding(start = 4.dp, end = if (isLastItem) 12.dp else 0.dp)) {
             MagiskTopBarIconButton(

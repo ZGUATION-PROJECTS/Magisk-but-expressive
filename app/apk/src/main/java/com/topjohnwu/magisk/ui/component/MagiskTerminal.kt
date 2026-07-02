@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,19 +52,36 @@ fun MagiskTerminal(
                     items = lines,
                     key = { index, _ -> index },
                     contentType = { _, _ -> "terminal_line" }) { _, line ->
-                    Text(
-                        text = line,
-                        modifier = Modifier.fillMaxWidth(),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
-                        color = terminalLineColor(line),
-                        maxLines = 8,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    MagiskTerminalLine(line)
                 }
             }
         }
     }
+}
+
+@Composable
+private fun MagiskTerminalLine(line: String) {
+    val lineColor = terminalLineColor(line)
+    val displayLine = remember(line) { line.withoutTerminalStatusPrefix() }
+    val textStyle = MaterialTheme.typography.bodySmall.copy(
+        color = lineColor,
+        fontFamily = FontFamily.Monospace
+    )
+    val inverseForeground = MaterialTheme.colorScheme.surface
+    val text = remember(displayLine, textStyle, inverseForeground) {
+        displayLine.toTerminalAnnotatedString(
+            baseStyle = textStyle,
+            inverseForeground = inverseForeground
+        )
+    }
+
+    Text(
+        text = text,
+        modifier = Modifier.fillMaxWidth(),
+        style = textStyle,
+        maxLines = 8,
+        overflow = TextOverflow.Ellipsis
+    )
 }
 
 @Composable
@@ -115,4 +133,10 @@ private fun terminalLineColor(line: String) = when {
     line.startsWith("!") -> MaterialTheme.colorScheme.error
     line.startsWith("-") -> MaterialTheme.colorScheme.primary
     else -> MaterialTheme.colorScheme.onSurface
+}
+
+private fun String.withoutTerminalStatusPrefix() = when {
+    this == "-" -> ""
+    startsWith("- ") -> drop(2)
+    else -> this
 }

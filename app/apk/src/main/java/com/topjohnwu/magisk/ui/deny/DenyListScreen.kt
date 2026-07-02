@@ -1,6 +1,5 @@
 package com.topjohnwu.magisk.ui.deny
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,6 +49,9 @@ import com.topjohnwu.magisk.ui.component.MagiskListItem
 import com.topjohnwu.magisk.ui.component.MagiskLoadingState
 import com.topjohnwu.magisk.ui.component.MagiskSearchField
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
+import com.topjohnwu.magisk.ui.motion.MagiskAnimatedVisibility
+import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
+import com.topjohnwu.magisk.ui.motion.MagiskMotionEngine
 import com.topjohnwu.magisk.view.SystemToastManager
 import com.topjohnwu.magisk.viewmodel.deny.DenyListAppUi
 import com.topjohnwu.magisk.viewmodel.deny.DenyListProcessUi
@@ -86,7 +88,7 @@ fun DenyListScreen(
             contentPadding = PaddingValues(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 24.dp)
         ) {
             item {
-                AnimatedVisibility(visible = state.searchVisible) {
+                MagiskAnimatedVisibility(visible = state.searchVisible) {
                     DenyListSearch(
                         query = state.query,
                         onQueryChange = viewModel::setQuery
@@ -232,8 +234,10 @@ private fun DenyListAppItem(
     onToggleProcess: (DenyListProcessUi) -> Unit
 ) {
     val active = app.checkedCount > 0
+    val alphaAnimation = MagiskMotionEngine.tweenSpec<Float>(MagiskMotionDuration.Short)
     val alpha by animateFloatAsState(
         targetValue = if (active) 1f else 0.65f,
+        animationSpec = alphaAnimation,
         label = "HideCardAlpha"
     )
     MagiskExpandableListItem(

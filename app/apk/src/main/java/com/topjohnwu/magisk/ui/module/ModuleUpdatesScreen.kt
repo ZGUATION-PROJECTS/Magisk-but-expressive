@@ -1,21 +1,27 @@
 package com.topjohnwu.magisk.ui.module
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -40,11 +47,10 @@ import com.topjohnwu.magisk.ui.component.MagiskDialogAction
 import com.topjohnwu.magisk.ui.component.MagiskEmptyState
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
 import com.topjohnwu.magisk.ui.component.MagiskLoadingState
+import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
 import com.topjohnwu.magisk.ui.component.card.MagiskCard
-import com.topjohnwu.magisk.ui.component.card.MagiskCardAction
-import com.topjohnwu.magisk.ui.component.card.MagiskStatusCard
-import com.topjohnwu.magisk.ui.component.card.MagiskStatusMetric
+import com.topjohnwu.magisk.ui.motion.MagiskAnimatedVisibility
 import com.topjohnwu.magisk.view.SystemToastManager
 import com.topjohnwu.magisk.viewmodel.module.ModuleUiItem
 import com.topjohnwu.magisk.viewmodel.module.ModuleViewModel
@@ -65,6 +71,11 @@ fun ModuleUpdatesScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val updates = state.modules.updatable()
+    val updateUrls = remember(updates) {
+        updates.mapNotNull { item ->
+            item.update?.zipUrl?.trim()?.takeIf(String::isNotBlank)
+        }.distinct()
+    }
     var pendingInstall by remember { mutableStateOf<ModuleUpdateInstallTarget?>(null) }
 
     LaunchedEffect(viewModel) {
@@ -103,53 +114,17 @@ fun ModuleUpdatesScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            MagiskStatusCard(
-                title = stringResource(CoreR.string.module_updates_title),
-                statusText = if (state.checkingUpdates) {
-                    stringResource(CoreR.string.module_updates_checking)
-                } else {
-                    stringResource(CoreR.string.module_updates_available_count, updates.size)
-                },
-                statusColor = if (updates.isNotEmpty()) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.secondary
-                },
-                icon = Icons.Rounded.SystemUpdate,
-                metrics = listOf(
-                    MagiskStatusMetric(
-                        label = stringResource(CoreR.string.modules),
-                        value = state.modules.size.toString()
-                    ),
-                    MagiskStatusMetric(
-                        label = stringResource(CoreR.string.update_available),
-                        value = updates.size.toString()
-                    )
-                ),
-                primaryAction = updates.takeIf { it.isNotEmpty() }?.let {
-                    MagiskCardAction(
-                        text = stringResource(CoreR.string.module_updates_install_all),
-                        icon = Icons.Rounded.SystemUpdate,
-                        onClick = {
-                            pendingInstall = ModuleUpdateInstallTarget.All(
-                                it.mapNotNull { item -> item.update?.zipUrl?.takeIf(String::isNotBlank) }
-                            )
-                        }
-                    )
-                },
-                secondaryAction = MagiskCardAction(
-                    text = stringResource(CoreR.string.settings_check_update_title),
-                    icon = Icons.Rounded.Refresh,
-                    onClick = { viewModel.refresh(force = true) }
-                ),
-                actionsStacked = true
+            ModuleUpdatesHeader(
+                updateCount = updates.size,
+                moduleCount = state.modules.size,
+                checking = state.checkingUpdates,
+                onRefresh = { viewModel.refresh(force = true) },
+                onInstallAll = updateUrls.takeIf { it.isNotEmpty() }?.let { urls ->
+                    {
+                        pendingInstall = ModuleUpdateInstallTarget.All(urls)
+                    }
+                }
             )
-        }
-
-        if (state.checkingUpdates) {
-            item {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
         }
 
         if (updates.isEmpty() && !state.checkingUpdates) {
@@ -169,13 +144,123 @@ fun ModuleUpdatesScreen(
                 item = updates[index],
                 onInstall = onInstall@{
                     val update = updates[index].update ?: return@onInstall
-                    val zipUrl = update.zipUrl.takeIf(String::isNotBlank) ?: return@onInstall
+                    val zipUrl = update.zipUrl.trim().takeIf(String::isNotBlank) ?: return@onInstall
                     pendingInstall = ModuleUpdateInstallTarget.Single(
                         name = update.name.ifBlank { updates[index].name },
                         zipUrl = zipUrl
                     )
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun ModuleUpdatesHeader(
+    updateCount: Int,
+    moduleCount: Int,
+    checking: Boolean,
+    onRefresh: () -> Unit,
+    onInstallAll: (() -> Unit)?,
+) {
+    MagiskCard(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        contentPadding = PaddingValues(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(52.dp),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.SystemUpdate,
+                        contentDescription = null
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(
+                    text = if (checking) {
+                        stringResource(CoreR.string.module_updates_checking)
+                    } else {
+                        stringResource(CoreR.string.module_updates_available_count, updateCount)
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = if (updateCount > 0) {
+                        stringResource(CoreR.string.module_updates_ready_summary)
+                    } else {
+                        stringResource(CoreR.string.module_updates_empty)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = stringResource(CoreR.string.module_updates_installed_count, moduleCount),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        MagiskAnimatedVisibility(visible = checking) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+
+        if (onInstallAll != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.weight(1f),
+                    shape = MagiskComponentDefaults.ControlShape
+                ) {
+                    Icon(Icons.Rounded.Refresh, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(CoreR.string.settings_check_update_title))
+                }
+                Button(
+                    onClick = onInstallAll,
+                    modifier = Modifier.weight(1f),
+                    shape = MagiskComponentDefaults.ControlShape
+                ) {
+                    Icon(Icons.Rounded.SystemUpdate, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(CoreR.string.module_updates_install_all))
+                }
+            }
+        } else {
+            OutlinedButton(
+                onClick = onRefresh,
+                modifier = Modifier.fillMaxWidth(),
+                shape = MagiskComponentDefaults.ControlShape
+            ) {
+                Icon(Icons.Rounded.Refresh, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(CoreR.string.settings_check_update_title))
+            }
         }
     }
 }
@@ -212,7 +297,7 @@ private fun ModuleUpdateInstallDialog(
         onDismissRequest = onDismiss,
         confirmAction = MagiskDialogAction(
             text = stringResource(android.R.string.ok),
-            onClick = {
+            onClick = onConfirmClick@{
                 val route = when (target) {
                     is ModuleUpdateInstallTarget.Single -> {
                         AppRoute.Flash(
@@ -222,9 +307,10 @@ private fun ModuleUpdateInstallDialog(
                     }
 
                     is ModuleUpdateInstallTarget.All -> {
+                        val urls = target.urls.takeIf { it.isNotEmpty() } ?: return@onConfirmClick
                         AppRoute.Flash(
                             action = Const.Value.FLASH_MULTIPLE_ZIPS,
-                            additionalData = FlashPayloadStore.putUrls(target.urls)
+                            additionalData = FlashPayloadStore.putUrls(urls)
                         )
                     }
                 }
@@ -245,51 +331,76 @@ private fun ModuleUpdateCard(
 ) {
     val update = item.update ?: return
 
-    MagiskCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
+    MagiskCard(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentPadding = PaddingValues(16.dp)
+    ) {
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = item.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = item.versionAuthor,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = stringResource(CoreR.string.module_updates_latest_version, update.version),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Medium
-            )
+            Surface(
+                modifier = Modifier.size(44.dp),
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.Extension,
+                        contentDescription = null
+                    )
+                }
+            }
 
-            if (update.changelog.isNotBlank() && !update.changelog.startsWith("http")) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
                 Text(
-                    text = update.changelog,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = item.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = item.versionAuthor,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 6,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = stringResource(CoreR.string.module_updates_latest_version, update.version),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
             Button(
                 onClick = onInstall,
-                modifier = Modifier.fillMaxWidth()
+                shape = MagiskComponentDefaults.ControlShape,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Icon(Icons.Rounded.SystemUpdate, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
                 Text(text = stringResource(CoreR.string.module_updates_install_one))
             }
+        }
+
+        if (update.changelog.isNotBlank() && !update.changelog.startsWith("http")) {
+            Text(
+                text = update.changelog,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 56.dp)
+            )
         }
     }
 }

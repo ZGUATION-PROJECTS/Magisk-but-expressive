@@ -1,9 +1,7 @@
 package com.topjohnwu.magisk.ui.component
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -56,6 +54,8 @@ import androidx.compose.ui.unit.sp
 import com.topjohnwu.magisk.navigation.AppNavigationConfig
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.navigation.AppRouteSpec
+import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
+import com.topjohnwu.magisk.ui.motion.MagiskMotionEngine
 
 enum class MagiskNavigationBarStyle {
     Docked,
@@ -153,20 +153,16 @@ private fun MagiskFloatingNavigationItem(
     showLabel: Boolean,
     onClick: () -> Unit
 ) {
+    val itemAnimation = MagiskMotionEngine.tweenSpec<Float>(MagiskMotionDuration.Short)
+    val colorAnimation = MagiskMotionEngine.tweenSpec<Color>(MagiskMotionDuration.Short)
     val alpha by animateFloatAsState(
         targetValue = if (selected) 1f else 0.58f,
-        animationSpec = spring(
-            stiffness = Spring.StiffnessMediumLow,
-            dampingRatio = Spring.DampingRatioNoBouncy
-        ),
+        animationSpec = itemAnimation,
         label = "MagiskNavAlpha"
     )
     val scale by animateFloatAsState(
         targetValue = if (selected) 1f else 0.96f,
-        animationSpec = spring(
-            stiffness = Spring.StiffnessLow,
-            dampingRatio = Spring.DampingRatioMediumBouncy
-        ),
+        animationSpec = itemAnimation,
         label = "MagiskNavScale"
     )
     val containerColor by animateColorAsState(
@@ -175,6 +171,7 @@ private fun MagiskFloatingNavigationItem(
         } else {
             MaterialTheme.colorScheme.surfaceContainerHigh
         },
+        animationSpec = colorAnimation,
         label = "MagiskNavContainer"
     )
 

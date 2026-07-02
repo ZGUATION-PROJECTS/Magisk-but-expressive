@@ -155,32 +155,104 @@ fun SettingsScreen(
         }
     }
 
-    // Custom Channel URL Dialog
+    // Custom Channel URL Bottom Sheet
     if (showCustomChannelUrlDialog) {
         var tempUrl by remember { mutableStateOf(state.customChannelUrl) }
-        MagiskDialog(
-            title = stringResource(CoreR.string.settings_update_custom),
-            onDismissRequest = { showCustomChannelUrlDialog = false },
-            textContent = {
-                OutlinedTextField(
-                    value = tempUrl,
-                    onValueChange = { tempUrl = it },
-                    label = { Text(stringResource(CoreR.string.settings_update_custom_msg)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmAction = MagiskDialogAction(
-                text = stringResource(android.R.string.ok),
-                onClick = {
-                    showCustomChannelUrlDialog = false
-                    viewModel.setCustomChannelUrl(tempUrl)
+        MagiskBottomSheet(onDismissRequest = { showCustomChannelUrlDialog = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Title group header (same style as MagiskSettingsGroup)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                        .padding(top = 4.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Link,
+                        contentDescription = null,
+                        tint = MagiskComponentDefaults.PrimaryIconTint,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = stringResource(CoreR.string.settings_update_custom),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MagiskComponentDefaults.PrimaryIconTint
+                    )
                 }
-            ),
-            dismissAction = MagiskDialogAction(
-                text = stringResource(android.R.string.cancel),
-                onClick = { showCustomChannelUrlDialog = false }
-            )
-        )
+
+                // Input field inside a card (same style as MagiskSettingsGroup Surface)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MagiskComponentDefaults.CardShape,
+                    color = MagiskComponentDefaults.CardContainer,
+                    border = MagiskComponentDefaults.CardBorder
+                ) {
+                    OutlinedTextField(
+                        value = tempUrl,
+                        onValueChange = { tempUrl = it },
+                        label = {
+                            Text(
+                                text = stringResource(CoreR.string.settings_update_custom_msg),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        shape = MagiskComponentDefaults.ControlShape,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MagiskComponentDefaults.PrimaryIconTint,
+                            unfocusedBorderColor = MagiskComponentDefaults.DividerColor,
+                            focusedLabelColor = MagiskComponentDefaults.PrimaryIconTint,
+                            unfocusedLabelColor = MagiskComponentDefaults.SecondaryText,
+                            cursorColor = MagiskComponentDefaults.PrimaryIconTint
+                        )
+                    )
+                }
+
+                // Action buttons row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
+                ) {
+                    TextButton(onClick = { showCustomChannelUrlDialog = false }) {
+                        Text(
+                            text = stringResource(android.R.string.cancel),
+                            color = MagiskComponentDefaults.SecondaryText,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            showCustomChannelUrlDialog = false
+                            viewModel.setCustomChannelUrl(tempUrl)
+                        },
+                        enabled = tempUrl.isNotBlank(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MagiskComponentDefaults.PrimaryIconTint
+                        ),
+                        shape = MagiskComponentDefaults.ControlShape
+                    ) {
+                        Text(
+                            text = stringResource(android.R.string.ok),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
     }
 
     // Hide App Bottom Sheet

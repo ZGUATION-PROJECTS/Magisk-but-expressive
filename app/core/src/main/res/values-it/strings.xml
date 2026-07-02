@@ -90,6 +90,12 @@
     <string name="menuSaveLog">Salva registro eventi</string>
     <string name="menuClearLog">Svuota il registro eventi</string>
     <string name="logs_cleared">Registro eventi svuotato correttamente.</string>
+    <string name="save_log">Salva log</string>
+    <string name="clear_log">Svuota log</string>
+    <string name="copy_log_line">Copia riga</string>
+    <string name="copy_log_entry">Copia log</string>
+    <string name="expand_log">Espandi log</string>
+    <string name="collapse_log">Comprimi log</string>
     <string name="log_save_summary">Esporta il file di log nella memoria</string>
     <string name="log_clear_summary">Svuota la cronologia attuale</string>
     <string name="refresh_log">Aggiorna registro eventi</string>
@@ -144,6 +150,8 @@
     <string name="module_updates_install_all">Aggiorna tutto</string>
     <string name="module_updates_install_one">Aggiorna</string>
     <string name="module_updates_latest_version">Ultima: %1$s</string>
+    <string name="module_updates_ready_summary">Pronti da installare</string>
+    <string name="module_updates_installed_count">Moduli installati: %1$d</string>
     <string name="module_updates_confirm_all_title">Aggiornare tutti i moduli?</string>
     <string name="module_updates_confirm_all">Installare gli aggiornamenti per %1$d moduli?</string>
     <string name="module_update_failed">Fallito: %1$s</string>

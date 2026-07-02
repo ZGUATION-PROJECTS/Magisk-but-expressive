@@ -119,7 +119,7 @@ fun MagiskListItem(
             headlineColor = if (enabled) MagiskComponentDefaults.PrimaryText else MaterialTheme.colorScheme.outline,
             supportingColor = MagiskComponentDefaults.SecondaryText
         ),
-        elevation = ListItemDefaults.elevation(ListItemDefaults.Elevation),
+        elevation = ListItemDefaults.elevation(),
         content = {
             Column(modifier = centerClickModifier) {
                 Text(
@@ -179,6 +179,8 @@ fun MagiskExpandableListItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    containerColor: Color = MagiskComponentDefaults.CardContainer,
+    border: BorderStroke? = MagiskComponentDefaults.CardBorder,
     leadingIcon: ImageVector? = null,
     leadingContent: (@Composable () -> Unit)? = null,
     clickCenterOnly: Boolean = false,
@@ -195,8 +197,8 @@ fun MagiskExpandableListItem(
     MagiskCard(
         modifier = modifier.fillMaxWidth(),
         shape = MagiskComponentDefaults.CardShape,
-        containerColor = MagiskComponentDefaults.CardContainer,
-        border = MagiskComponentDefaults.CardBorder,
+        containerColor = containerColor,
+        border = border,
         contentPadding = PaddingValues(0.dp)
     ) {
         Column(

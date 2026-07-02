@@ -123,11 +123,22 @@ class FlashViewModel : ViewModel() {
     }
 
     private suspend fun flashMultipleZipsWithLogs(urisString: String): Boolean {
-        val rawUrls = FlashPayloadStore.takeUrls(urisString) ?: urisString
+        val storedUrls = FlashPayloadStore.takeUrls(urisString)
+        if (storedUrls == null && FlashPayloadStore.isPayloadToken(urisString)) {
+            terminal.addLine(errorLine(CoreR.string.flash_invalid_uri))
+            return false
+        }
+        val rawUrls = storedUrls ?: urisString
             .lineSequence()
             .flatMap { it.split(",") }
+            .map { it.trim() }
             .filter { it.isNotBlank() }
+            .distinct()
             .toList()
+        if (rawUrls.isEmpty()) {
+            terminal.addLine(errorLine(CoreR.string.flash_invalid_uri))
+            return false
+        }
         val uris = rawUrls.map { Uri.parse(it) }
         var allSuccess = uris.isNotEmpty()
         uris.forEachIndexed { index, uri ->
@@ -212,14 +223,30 @@ class FlashViewModel : ViewModel() {
         val (dir, zipFile, displayName) = prepResult
         terminal.addLine(AppContext.getString(CoreR.string.flash_installing_file, displayName))
 
-        val success = withContext(Dispatchers.IO) {
-            Shell.cmd("sh $dir/update-binary dummy 1 '${zipFile.absolutePath}'")
-                .to(terminal.console, terminal.logs).exec().isSuccess
+        val updateBinary = File(dir, "update-binary")
+        val success = try {
+            withContext(Dispatchers.IO) {
+                Shell.cmd(
+                    "sh ${shellQuote(updateBinary.absolutePath)} dummy 1 ${shellQuote(zipFile.absolutePath)}"
+                ).to(terminal.console, terminal.logs).exec().isSuccess
+            }
+        } finally {
+            cleanupFlashFiles(dir)
         }
         if (!success) terminal.addLine(errorLine(CoreR.string.flash_installation_failed))
 
-        Shell.cmd("cd /", "rm -rf $dir ${Const.TMPDIR}").submit()
         return success
+    }
+
+    private suspend fun cleanupFlashFiles(dir: File) {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                Shell.cmd(
+                    "cd /",
+                    "rm -rf ${shellQuote(dir.absolutePath)} ${shellQuote(Const.TMPDIR)}"
+                ).exec()
+            }.onFailure(Timber::w)
+        }
     }
 
     private suspend fun downloadUrlToFile(uri: Uri, file: File, title: String) {

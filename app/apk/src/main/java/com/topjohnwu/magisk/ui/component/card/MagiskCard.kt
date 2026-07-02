@@ -1,8 +1,6 @@
 package com.topjohnwu.magisk.ui.component.card
 
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -20,6 +18,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
+import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
+import com.topjohnwu.magisk.ui.motion.MagiskMotionEngine
 
 @Composable
 fun MagiskCard(
@@ -37,16 +37,14 @@ fun MagiskCard(
 
     val isPressed by interactionSource.collectIsPressedAsState()
 
+    val scaleAnimation = MagiskMotionEngine.tweenSpec<Float>(MagiskMotionDuration.Short)
     val scale by animateFloatAsState(
         targetValue = if (onClick != null && enabled && isPressed) {
             0.985f
         } else {
             1f
         },
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
+        animationSpec = scaleAnimation,
         label = "MagiskCardScale"
     )
 

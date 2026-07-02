@@ -12,6 +12,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.lazy.LazyListState
@@ -101,6 +103,39 @@ object MagiskMotionEngine {
         } else {
             EnterTransition.None.togetherWith(ExitTransition.None)
         }
+    }
+
+    @Composable
+    fun scaleEnter(duration: MagiskMotionDuration = MagiskMotionDuration.Short): EnterTransition {
+        val profile = profile()
+        return if (profile.enabled) {
+            fadeIn(tween(profile.duration(duration))) +
+                    scaleIn(
+                        initialScale = 0.82f,
+                        animationSpec = tween(profile.duration(duration), easing = EaseInOutCubic)
+                    )
+        } else {
+            EnterTransition.None
+        }
+    }
+
+    @Composable
+    fun scaleExit(duration: MagiskMotionDuration = MagiskMotionDuration.Short): ExitTransition {
+        val profile = profile()
+        return if (profile.enabled) {
+            fadeOut(tween(profile.duration(duration))) +
+                    scaleOut(
+                        targetScale = 0.82f,
+                        animationSpec = tween(profile.duration(duration), easing = EaseInOutCubic)
+                    )
+        } else {
+            ExitTransition.None
+        }
+    }
+
+    @Composable
+    fun iconTransform(): ContentTransform {
+        return scaleEnter().togetherWith(scaleExit())
     }
 }
 

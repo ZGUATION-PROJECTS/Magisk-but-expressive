@@ -1,128 +1,239 @@
 package com.topjohnwu.magisk.ui.component
 
-import androidx.compose.animation.animateContentSize
+import android.content.ClipData
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.topjohnwu.magisk.ui.component.card.MagiskCard
 import com.topjohnwu.magisk.viewmodel.log.MagiskLogLevel
 import com.topjohnwu.magisk.viewmodel.log.MagiskLogUiItem
+import com.topjohnwu.magisk.view.SystemToastManager
+import kotlinx.coroutines.launch
+import com.topjohnwu.magisk.core.R as CoreR
 
 @Composable
 fun LogItem(item: MagiskLogUiItem) {
     val colors = MaterialTheme.colorScheme
-    val expanded = true
-    val levelColor = when (item.level) {
+    var expanded by remember(item.id) { mutableStateOf(false) }
+    val clipboard = LocalClipboard.current
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val copyText = remember(item) { item.toClipboardText() }
+    val levelColor = item.level.toColor()
+    val isIssue = item.level == MagiskLogLevel.ERROR || item.level == MagiskLogLevel.FATAL
+
+    MagiskExpandableListItem(
+        title = item.tag.ifBlank { item.sourceLabel },
+        subtitle = if (expanded) item.timestamp else item.message,
+        expanded = expanded,
+        onClick = { expanded = !expanded },
+        containerColor = if (isIssue) {
+            colors.errorContainer.copy(alpha = 0.24f)
+        } else {
+            MagiskComponentDefaults.CardContainer
+        },
+        border = if (isIssue) {
+            BorderStroke(1.dp, colors.error.copy(alpha = 0.32f))
+        } else {
+            MagiskComponentDefaults.CardBorder
+        },
+        leadingContent = {
+            LogLevelBadge(
+                label = item.level.shortLabel,
+                color = levelColor
+            )
+        },
+        headerTrailingContent = {
+            Text(
+                text = item.timestamp,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    ) {
+        LogExpandedContent(
+            item = item,
+            levelColor = levelColor,
+            onCopy = {
+                coroutineScope.launch {
+                    clipboard.setClipEntry(
+                        ClipEntry(ClipData.newPlainText("log", copyText))
+                    )
+                    SystemToastManager.show(
+                        context,
+                        context.getString(CoreR.string.copied_to_clipboard)
+                    )
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun MagiskLogLevel.toColor(): Color {
+    val colors = MaterialTheme.colorScheme
+    return when (this) {
         MagiskLogLevel.VERBOSE -> colors.onSurfaceVariant
         MagiskLogLevel.DEBUG -> colors.primary
         MagiskLogLevel.INFO -> colors.tertiary
         MagiskLogLevel.WARN -> colors.secondary
-        MagiskLogLevel.ERROR, MagiskLogLevel.FATAL -> colors.error
+        MagiskLogLevel.ERROR,
+        MagiskLogLevel.FATAL -> colors.error
+
         else -> colors.onSurfaceVariant
     }
+}
 
-    MagiskCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(),
-        shape = RoundedCornerShape(10.dp),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-        containerColor = if (item.level == MagiskLogLevel.ERROR || item.level == MagiskLogLevel.FATAL) {
-            colors.errorContainer.copy(alpha = 0.26f)
-        } else {
-            colors.surfaceContainerHigh
-        },
-        border = null
+@Composable
+private fun LogLevelBadge(
+    label: String,
+    color: Color,
+) {
+    Surface(
+        modifier = Modifier.size(40.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = color.copy(alpha = 0.14f),
+        contentColor = color
     ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(if (expanded) 7.dp else 0.dp)
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = item.level.shortLabel,
-                        color = levelColor,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
-                    )
-                    Text(
-                        text = item.tag,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (!expanded) {
-                        Text(
-                            text = item.message,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-                Text(
-                    text = item.timestamp,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
-            }
+            Text(
+                text = label,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                maxLines = 1
+            )
+        }
+    }
+}
 
-            if (expanded) {
+@Composable
+private fun LogExpandedContent(
+    item: MagiskLogUiItem,
+    levelColor: Color,
+    onCopy: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SelectionContainer {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.62f)
+            ) {
                 Text(
                     text = item.message,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp,
                     lineHeight = 16.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                if (item.pid > 0) {
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = levelColor.copy(alpha = 0.10f),
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    ) {
-                        Text(
-                            text = "PID ${item.pid}  TID ${item.tid}",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
-                }
-            } else if (item.pid > 0) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = "PID ${item.pid}  TID ${item.tid}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-                        maxLines = 1
-                    )
-                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LogMetaChip(text = item.level.name, color = levelColor)
+            LogMetaChip(text = item.timestamp)
+            if (item.pid > 0) {
+                LogMetaChip(text = "PID ${item.pid}")
+                LogMetaChip(text = "TID ${item.tid}")
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            OutlinedButton(
+                onClick = onCopy,
+                shape = MagiskComponentDefaults.ControlShape
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.ContentCopy,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(CoreR.string.copy_log_entry))
             }
         }
     }
+}
+
+@Composable
+private fun LogMetaChip(
+    text: String,
+    color: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = color.copy(alpha = 0.10f),
+        contentColor = color
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+private fun MagiskLogUiItem.toClipboardText() = buildString {
+    append(timestamp)
+    append(' ')
+    append(level.shortLabel)
+    if (tag.isNotBlank()) {
+        append('/')
+        append(tag)
+    }
+    if (pid > 0) {
+        append(" PID ")
+        append(pid)
+        append(" TID ")
+        append(tid)
+    }
+    append('\n')
+    append(raw.ifBlank { message })
 }

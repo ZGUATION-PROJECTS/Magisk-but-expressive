@@ -4,7 +4,6 @@ import android.net.Uri
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -73,6 +72,8 @@ import com.topjohnwu.magisk.ui.install.InstallScreen
 import com.topjohnwu.magisk.ui.install.InstallTopBarActions
 import com.topjohnwu.magisk.ui.log.LogsScreen
 import com.topjohnwu.magisk.ui.log.LogsTopBarActions
+import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
+import com.topjohnwu.magisk.ui.motion.MagiskMotionEngine
 import com.topjohnwu.magisk.ui.module.ModuleActionScreen
 import com.topjohnwu.magisk.ui.module.ModuleActionTopBarActions
 import com.topjohnwu.magisk.ui.module.ModuleUpdatesScreen
@@ -177,7 +178,9 @@ fun MagiskAppContainer(
                         }
                     }, actions = {
                         topBarActions?.invoke(this)
-                    }, subtitleContent = if (flashTopBarState?.running == true) {
+                    }, compactTitle = currentSpec.route is AppRoute.Flash ||
+                        currentSpec.route is AppRoute.ModuleAction,
+                    subtitleContent = if (flashTopBarState?.running == true) {
                         {
                             LinearWavyProgressIndicator(
                                 modifier = Modifier
@@ -213,9 +216,12 @@ fun MagiskAppContainer(
                     }
 
                     // Hide bottom bar when scrolling
+                    val bottomBarAnimation = MagiskMotionEngine.tweenSpec<Float>(
+                        MagiskMotionDuration.Medium
+                    )
                     val bottomBarOffset by animateFloatAsState(
                         targetValue = if (topBarScrollBehavior.state.heightOffset < -10f) 400f else 0f,
-                        animationSpec = spring(stiffness = SpringStiffnessLow),
+                        animationSpec = bottomBarAnimation,
                         label = "BottomBarOffset"
                     )
 
@@ -608,8 +614,6 @@ private fun NavHostController.navigateTopLevel(spec: AppRouteSpec) {
         restoreState = true
     }
 }
-
-private const val SpringStiffnessLow = 200f
 
 private fun magiskEnterTransition(isPop: Boolean): EnterTransition {
     return fadeIn(tween(300)) + slideInHorizontally(

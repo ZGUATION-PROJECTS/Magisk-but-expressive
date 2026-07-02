@@ -1,14 +1,18 @@
 package com.topjohnwu.magisk.ui.component
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -20,9 +24,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -140,13 +146,19 @@ fun MagiskDropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
         modifier = modifier
-            .widthIn(min = 180.dp)
+            .widthIn(min = 220.dp)
             .heightIn(max = 480.dp),
-        shape = MagiskComponentDefaults.ControlShape,
+        shape = MagiskComponentDefaults.CardShape,
         containerColor = MagiskComponentDefaults.PanelContainer,
         tonalElevation = 6.dp,
         shadowElevation = 8.dp,
-        content = content
+        content = {
+            Column(
+                modifier = Modifier.padding(vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                content = content
+            )
+        }
     )
 }
 
@@ -168,20 +180,25 @@ fun MagiskDropdownMenuItem(
         selected -> MagiskComponentDefaults.PrimaryIconTint
         else -> MagiskComponentDefaults.PrimaryText
     }
+    val iconContainerColor = when {
+        destructive -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f)
+        selected -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceContainerHighest
+    }
 
     DropdownMenuItem(
         text = {
             Column(verticalArrangement = Arrangement.Center) {
                 Text(
                     text = text,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                     color = contentColor
                 )
                 if (subtitle != null) {
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = contentColor.copy(alpha = 0.62f)
                     )
                 }
@@ -190,17 +207,38 @@ fun MagiskDropdownMenuItem(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.heightIn(min = if (subtitle != null) 56.dp else 48.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
         leadingIcon = leadingIcon?.let {
             {
+                Surface(
+                    modifier = Modifier.size(32.dp),
+                    shape = MaterialTheme.shapes.small,
+                    color = iconContainerColor,
+                    contentColor = contentColor
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = it,
+                            contentDescription = null,
+                            tint = contentColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        },
+        trailingIcon = trailingContent ?: if (selected) {
+            {
                 Icon(
-                    imageVector = it,
+                    imageVector = Icons.Rounded.Check,
                     contentDescription = null,
                     tint = contentColor,
                     modifier = Modifier.size(20.dp)
                 )
             }
-        },
-        trailingIcon = trailingContent
+        } else {
+            null
+        }
     )
 }
 

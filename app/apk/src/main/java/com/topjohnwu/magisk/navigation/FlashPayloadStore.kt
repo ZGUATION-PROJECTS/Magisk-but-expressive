@@ -17,4 +17,8 @@ object FlashPayloadStore {
         if (!token.startsWith(PREFIX)) return null
         return urls.remove(token.removePrefix(PREFIX))
     }
+
+    fun isPayloadToken(value: String): Boolean {
+        return value.startsWith(PREFIX)
+    }
 }

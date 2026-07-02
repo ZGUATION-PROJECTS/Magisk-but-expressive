@@ -41,33 +41,41 @@ dependencies {
     api(project(":shared"))
     coreLibraryDesugaring(libs.jdk.libs)
 
-    api(libs.timber)
+    // Public core APIs
     api(libs.markwon.core)
+    api(libs.timber)
+
+    // Archive / crypto
     implementation(libs.bcpkix)
     implementation(libs.commons.compress)
     implementation(libs.xz)
+
+    // Generated models
     implementation(libs.wire.runtime)
 
+    // Root services
     api(libs.libsu.core)
-    api(libs.libsu.service)
     api(libs.libsu.nio)
+    api(libs.libsu.service)
 
+    // Network
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.dnsoverhttps)
+    implementation(libs.okhttp.logging)
     implementation(libs.retrofit)
     implementation(libs.retrofit.moshi)
     implementation(libs.retrofit.scalars)
 
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.logging)
-    implementation(libs.okhttp.dnsoverhttps)
-
-    implementation(libs.room.runtime)
+    // Database
     implementation(libs.room.ktx)
+    implementation(libs.room.runtime)
     ksp(libs.room.compiler)
 
-    implementation(libs.core.splashscreen)
-    implementation(libs.core.ktx)
+    // AndroidX
     implementation(libs.activity)
     implementation(libs.collection.ktx)
+    implementation(libs.core.ktx)
+    implementation(libs.core.splashscreen)
     implementation(libs.profileinstaller)
 
     // We also implement all our tests in this module.

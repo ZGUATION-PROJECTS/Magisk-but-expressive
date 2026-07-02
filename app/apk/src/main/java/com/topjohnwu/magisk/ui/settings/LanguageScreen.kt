@@ -1,6 +1,5 @@
 package com.topjohnwu.magisk.ui.settings
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +36,7 @@ import com.topjohnwu.magisk.ui.component.MagiskSettingsGroup
 import com.topjohnwu.magisk.ui.component.MagiskSettingsItemContent
 import com.topjohnwu.magisk.ui.component.MagiskSettingsListItem
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
+import com.topjohnwu.magisk.ui.motion.MagiskAnimatedVisibility
 import com.topjohnwu.magisk.viewmodel.settings.SettingsViewModel
 import java.util.Locale
 import com.topjohnwu.magisk.core.R as CoreR
@@ -65,7 +65,7 @@ fun LanguageScreen(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        AnimatedVisibility(visible = state.languageSearchVisible) {
+        MagiskAnimatedVisibility(visible = state.languageSearchVisible) {
             MagiskSearchField(
                 value = state.languageSearchQuery,
                 onValueChange = viewModel::setLanguageSearchQuery,

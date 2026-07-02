@@ -1,10 +1,5 @@
 package com.topjohnwu.magisk.ui.log
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.arch.UiText
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.ui.component.LogItem
+import com.topjohnwu.magisk.ui.motion.MagiskAnimatedVisibility
 import com.topjohnwu.magisk.ui.component.MagiskDropdownMenu
 import com.topjohnwu.magisk.ui.component.MagiskDropdownMenuItem
 import com.topjohnwu.magisk.ui.component.MagiskEmptyState
@@ -94,11 +90,7 @@ fun LogsScreen(
             MagiskLoadingState(modifier = Modifier.fillMaxSize())
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
-                AnimatedVisibility(
-                    visible = controlsVisible && state.searchVisible,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
+                MagiskAnimatedVisibility(visible = controlsVisible && state.searchVisible) {
                     MagiskSearchField(
                         value = state.searchQuery,
                         onValueChange = viewModel::setSearchQuery,

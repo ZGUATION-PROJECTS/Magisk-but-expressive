@@ -178,11 +178,21 @@ class ModuleViewModel(
         }
     }
 
-    private suspend fun isModuleRepoLoaded(): Boolean =
-        withTimeoutOrNull(3000) { withContext(Dispatchers.IO) { LocalModule.loaded() } } ?: false
+    private suspend fun isModuleRepoLoaded(): Boolean {
+        return runCatching {
+            withTimeoutOrNull(3000) {
+                withContext(Dispatchers.IO) { LocalModule.loaded() }
+            } ?: false
+        }.getOrDefault(false)
+    }
 
-    private suspend fun readInstalledModules(): List<LocalModule> =
-        withTimeoutOrNull(5000) { withContext(Dispatchers.IO) { moduleProvider() } } ?: emptyList()
+    private suspend fun readInstalledModules(): List<LocalModule> {
+        return runCatching {
+            withTimeoutOrNull(5000) {
+                withContext(Dispatchers.IO) { moduleProvider() }
+            } ?: emptyList()
+        }.getOrDefault(emptyList())
+    }
 
     companion object {
         private const val MIN_REFRESH_INTERVAL_MS = 1200L
