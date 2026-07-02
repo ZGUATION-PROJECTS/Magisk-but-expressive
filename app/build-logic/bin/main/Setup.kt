@@ -125,17 +125,25 @@ fun Project.setupCoreLib() {
 
                 for (abi in abiList) {
                     into(abi) {
-                        from(rootFile("native/out/$abi")) {
-                            include("magiskboot", "magiskinit", "magiskpolicy", "magisk", "libinit-ld.so")
-                            rename { if (it.endsWith(".so")) it else "lib$it.so" }
+                        from(rootFile("asset/binaries/releases/e8a58776-alpha-30700/$abi")) {
+                            include("magiskboot", "magiskinit", "magiskpolicy", "magisk", "init-ld", "busybox")
+                            rename {
+                                when (it) {
+                                    "init-ld" -> "libinit-ld.so"
+                                    "busybox" -> "libbusybox.so"
+                                    else -> if (it.endsWith(".so")) it else "lib$it.so"
+                                }
+                            }
                         }
                     }
                 }
-                from(zipTree(downloadFile(BUSYBOX_DOWNLOAD_URL, BUSYBOX_ZIP_CHECKSUM)))
-                include(abiList.map { "$it/libbusybox.so" })
                 onlyIf {
-                    if (inputs.sourceFiles.files.size != abiList.size * 6)
-                        throw StopExecutionException("Please build binaries first! (./build.py binary)")
+                    for (abi in abiList) {
+                        val dir = rootFile("asset/binaries/releases/e8a58776-alpha-30700/$abi")
+                        if (!dir.exists() || dir.listFiles()?.size ?: 0 < 6) {
+                            throw StopExecutionException("Missing binaries in asset/binaries/releases/e8a58776-alpha-30700/$abi")
+                        }
+                    }
                     true
                 }
             }
@@ -277,7 +285,7 @@ fun Project.setupMainApk() {
         namespace = "com.topjohnwu.magisk"
 
         defaultConfig {
-            applicationId = "com.topjohnwu.magisk"
+            applicationId = "io.github.vvb2060.magisk"
             vectorDrawables.useSupportLibrary = true
             versionName = Config.version
             versionCode = Config.versionCode

@@ -1,0 +1,8 @@
+{
+  "magisk": {
+    "version": "e8a58776-alpha",
+    "versionCode": 30701,
+    "link": "https://github.com/Anto426/Magisk-but-expressive/releases/latest/download/app-release.apk",
+    "note": "https://raw.githubusercontent.com/Anto426/Magisk-but-expressive/main/changelog.txt"
+  }
+}
