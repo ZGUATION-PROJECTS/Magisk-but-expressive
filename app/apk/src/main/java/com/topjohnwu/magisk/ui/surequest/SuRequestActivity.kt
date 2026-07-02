@@ -66,12 +66,26 @@ import com.topjohnwu.magisk.core.ktx.toast
 import com.topjohnwu.magisk.core.su.SuCallbackHandler
 import com.topjohnwu.magisk.core.su.SuCallbackHandler.REQUEST
 import com.topjohnwu.magisk.core.wrap
-import com.topjohnwu.magisk.ui.component.MagiskChipOption
-import com.topjohnwu.magisk.ui.component.MagiskElevatedPanel
-import com.topjohnwu.magisk.ui.component.MagiskFilterChipRow
-import com.topjohnwu.magisk.ui.component.MagiskIconBadge
-import com.topjohnwu.magisk.ui.component.MagiskLoadingState
+import com.topjohnwu.magisk.ui.component.*
+import com.topjohnwu.magisk.ui.component.card.MagiskElevatedPanel
 import com.topjohnwu.magisk.ui.theme.MagiskTheme
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.layout
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.UnfoldMore
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import com.topjohnwu.magisk.viewmodel.surequest.SuRequestUiState
 import com.topjohnwu.magisk.viewmodel.surequest.SuRequestViewModel
 import kotlinx.coroutines.Dispatchers
@@ -123,9 +137,7 @@ class SuRequestActivity : ComponentActivity(), UntrackedActivity {
         setContent {
             MagiskTheme {
                 SuRequestEffects(
-                    activity = this@SuRequestActivity,
-                    extension = extension,
-                    viewModel = viewModel
+                    activity = this@SuRequestActivity, extension = extension, viewModel = viewModel
                 )
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 SuRequestScreen(
@@ -171,22 +183,19 @@ class SuRequestActivity : ComponentActivity(), UntrackedActivity {
         override fun sendAccessibilityEvent(host: View, eventType: Int) {}
         override fun performAccessibilityAction(host: View, action: Int, args: Bundle?) = true
         override fun sendAccessibilityEventUnchecked(host: View, event: AccessibilityEvent) {}
-        override fun dispatchPopulateAccessibilityEvent(host: View, event: AccessibilityEvent) = true
+        override fun dispatchPopulateAccessibilityEvent(host: View, event: AccessibilityEvent) =
+            true
+
         override fun onPopulateAccessibilityEvent(host: View, event: AccessibilityEvent) {}
         override fun onInitializeAccessibilityEvent(host: View, event: AccessibilityEvent) {}
         override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {}
 
         override fun addExtraDataToAccessibilityNodeInfo(
-            host: View,
-            info: AccessibilityNodeInfo,
-            extraDataKey: String,
-            arguments: Bundle?
+            host: View, info: AccessibilityNodeInfo, extraDataKey: String, arguments: Bundle?
         ) = Unit
 
         override fun onRequestSendAccessibilityEvent(
-            host: ViewGroup,
-            child: View,
-            event: AccessibilityEvent
+            host: ViewGroup, child: View, event: AccessibilityEvent
         ) = false
 
         override fun getAccessibilityNodeProvider(host: View): AccessibilityNodeProvider? = null
@@ -195,9 +204,7 @@ class SuRequestActivity : ComponentActivity(), UntrackedActivity {
 
 @Composable
 private fun SuRequestEffects(
-    activity: SuRequestActivity,
-    extension: ActivityExtension,
-    viewModel: SuRequestViewModel
+    activity: SuRequestActivity, extension: ActivityExtension, viewModel: SuRequestViewModel
 ) {
     val context = LocalContext.current
     LaunchedEffect(viewModel) {
@@ -207,9 +214,11 @@ private fun SuRequestEffects(
                 UiEffect.RequestAuthentication -> {
                     extension.withAuthentication(viewModel::onAuthenticationResult)
                 }
+
                 is UiEffect.Message -> {
                     context.toast(effect.text.resolve(context), Toast.LENGTH_SHORT)
                 }
+
                 else -> Unit
             }
         }
@@ -226,7 +235,7 @@ private fun SuRequestScreen(
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = Color.Black.copy(alpha = 0.45f)
     ) {
         Box(
             modifier = Modifier
@@ -272,8 +281,8 @@ private fun SuRequestPanel(
             } else {
                 false
             }
-            val obscured = event.flags and MotionEvent.FLAG_WINDOW_IS_OBSCURED != 0 ||
-                partiallyObscured
+            val obscured =
+                event.flags and MotionEvent.FLAG_WINDOW_IS_OBSCURED != 0 || partiallyObscured
             if (obscured && event.action == MotionEvent.ACTION_UP) {
                 context.toast(CoreR.string.touch_filtered_warning, Toast.LENGTH_SHORT)
             }
@@ -281,88 +290,246 @@ private fun SuRequestPanel(
         }
     }
 
+    var dropdownExpanded by remember { mutableStateOf(false) }
+
     MagiskElevatedPanel(
         modifier = Modifier
             .fillMaxWidth()
             .widthIn(max = 440.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                MagiskIconBadge(
-                    icon = Icons.Rounded.Security,
-                    size = 48.dp,
-                    iconSize = 24.dp
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = state.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = state.packageName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            Text(
-                text = stringResource(CoreR.string.su_request_title),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Start
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Icon(
+                painter = painterResource(id = CoreR.drawable.ic_magisk_outline),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(180.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 40.dp, y = (-20).dp)
+                    .alpha(0.05f),
+                tint = MaterialTheme.colorScheme.primary
             )
 
-            MagiskFilterChipRow(
-                options = timeoutItems.mapIndexed { index, label ->
-                    MagiskChipOption(index, label)
-                },
-                selected = state.selectedItemPosition,
-                onSelected = {
-                    onTimeoutTouched()
-                    onTimeoutSelected(it)
-                }
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            Column(
+                modifier = Modifier.padding(28.dp), verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                OutlinedButton(
-                    onClick = onDeny,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(denyText, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                Button(
-                    onClick = onGrant,
-                    enabled = state.grantEnabled,
-                    modifier = Modifier
-                        .weight(1f)
-                        .pointerInteropFilter(onTouchEvent = grantTouchFilter)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Security,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                // Header Row with shield icon
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        modifier = Modifier.size(36.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.Security,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = stringResource(CoreR.string.grant),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = stringResource(id = CoreR.string.su_request_title).uppercase(),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp,
+                        color = MaterialTheme.colorScheme.outline
                     )
+                }
+
+                // Main App Info Card
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(54.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLowest
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AppIcon(
+                                    packageName = state.iconPackageName ?: state.packageName,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(20.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = state.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Black,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = state.packageName,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+
+                // Interactive Section
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Timeout Selector (Custom Dropdown)
+                    Box {
+                        Surface(
+                            onClick = {
+                                if (state.grantEnabled) {
+                                    onTimeoutTouched()
+                                    dropdownExpanded = true
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(MagiskComponentDefaults.ActionHeight),
+                            shape = MagiskComponentDefaults.ControlShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            enabled = state.grantEnabled
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Timer,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = timeoutItems.getOrNull(state.selectedItemPosition).orEmpty(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    imageVector = Icons.Rounded.UnfoldMore,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                        }
+
+                        MagiskDropdownMenu(
+                            expanded = dropdownExpanded,
+                            onDismissRequest = { dropdownExpanded = false }
+                        ) {
+                            timeoutItems.forEachIndexed { index, item ->
+                                MagiskDropdownMenuItem(
+                                    text = item,
+                                    selected = index == state.selectedItemPosition,
+                                    onClick = {
+                                        dropdownExpanded = false
+                                        onTimeoutSelected(index)
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // Warning Text Section
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Warning,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                text = stringResource(id = CoreR.string.su_warning),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 16.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(4.dp))
+
+                // Buttons Action Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        onClick = onDeny,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(MagiskComponentDefaults.ActionHeight),
+                        shape = MagiskComponentDefaults.ControlShape,
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = denyText.uppercase(),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = onGrant,
+                        enabled = state.grantEnabled,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(MagiskComponentDefaults.ActionHeight)
+                            .pointerInteropFilter(onTouchEvent = grantTouchFilter),
+                        shape = MagiskComponentDefaults.ControlShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Security,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(id = CoreR.string.grant).uppercase(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
                 }
             }
         }

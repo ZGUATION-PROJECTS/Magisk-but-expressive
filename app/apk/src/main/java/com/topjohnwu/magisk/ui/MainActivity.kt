@@ -28,6 +28,7 @@ import com.topjohnwu.magisk.core.ktx.reflectField
 import com.topjohnwu.magisk.core.ktx.toast
 import com.topjohnwu.magisk.core.tasks.AppMigration
 import com.topjohnwu.magisk.core.wrap
+import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
 import com.topjohnwu.magisk.view.Shortcuts
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -122,12 +123,12 @@ class MainActivity : UIActivity<Unit>(), SplashScreenHost {
 
     private fun showUnsupportedMessage() {
         val messages = mutableListOf<Pair<Int, Int>>()
+        val runtime = MagiskRuntimeEngine.snapshot()
 
-        if (Info.env.isUnsupported) {
+        if (runtime.isUnsupported) {
             messages.add(CoreR.string.unsupport_magisk_title to CoreR.string.unsupport_magisk_msg)
         }
-        if (!Info.isEmulator && Info.env.isActive && System.getenv("PATH")
-                ?.split(':')
+        if (!runtime.isEmulator && runtime.isInstalled && System.getenv("PATH")?.split(':')
                 ?.filterNot { java.io.File("$it/magisk").exists() }
                 ?.any { java.io.File("$it/su").exists() } == true
         ) {
@@ -146,9 +147,9 @@ class MainActivity : UIActivity<Unit>(), SplashScreenHost {
     }
 
     private fun askForHomeShortcut() {
-        if (isRunningAsStub &&
-            !Config.askedHome &&
-            androidx.core.content.pm.ShortcutManagerCompat.isRequestPinShortcutSupported(this)
+        if (isRunningAsStub && !Config.askedHome && androidx.core.content.pm.ShortcutManagerCompat.isRequestPinShortcutSupported(
+                this
+            )
         ) {
             Config.askedHome = true
             showShortcutPrompt.value = true
@@ -168,13 +169,10 @@ private fun MainActivityDialogs(activity: MainActivity) {
             text = activity.getString(CoreR.string.unsupport_nonroot_stub_msg),
             onDismissRequest = {},
             confirmAction = com.topjohnwu.magisk.ui.component.MagiskDialogAction(
-                text = activity.getString(CoreR.string.install),
-                onClick = {
+                text = activity.getString(CoreR.string.install), onClick = {
                     activity.showInvalidState.value = false
                     activity.handleInvalidStateInstall()
-                }
-            )
-        )
+                }))
     }
 
     unsupportedMessages.forEachIndexed { index, pair ->
@@ -187,9 +185,7 @@ private fun MainActivityDialogs(activity: MainActivity) {
                 onDismissRequest = { show.value = false },
                 confirmAction = com.topjohnwu.magisk.ui.component.MagiskDialogAction(
                     text = activity.getString(android.R.string.ok),
-                    onClick = { show.value = false }
-                )
-            )
+                    onClick = { show.value = false }))
         }
     }
 
@@ -199,16 +195,12 @@ private fun MainActivityDialogs(activity: MainActivity) {
             text = activity.getString(CoreR.string.add_shortcut_msg),
             onDismissRequest = { activity.showShortcutPrompt.value = false },
             confirmAction = com.topjohnwu.magisk.ui.component.MagiskDialogAction(
-                text = activity.getString(android.R.string.ok),
-                onClick = {
+                text = activity.getString(android.R.string.ok), onClick = {
                     activity.showShortcutPrompt.value = false
                     Shortcuts.addHomeIcon(activity)
-                }
-            ),
+                }),
             dismissAction = com.topjohnwu.magisk.ui.component.MagiskDialogAction(
                 text = activity.getString(android.R.string.cancel),
-                onClick = { activity.showShortcutPrompt.value = false }
-            )
-        )
+                onClick = { activity.showShortcutPrompt.value = false }))
     }
 }

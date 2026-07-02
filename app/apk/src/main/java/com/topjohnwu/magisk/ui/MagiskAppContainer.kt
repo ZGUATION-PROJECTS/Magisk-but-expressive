@@ -1,165 +1,578 @@
 package com.topjohnwu.magisk.ui
 
-import androidx.activity.compose.BackHandler
+import android.net.Uri
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Article
-import androidx.compose.material.icons.rounded.Extension
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Security
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.SystemUpdate
-import androidx.compose.material.icons.rounded.Terminal
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
-import androidx.navigation3.ui.NavDisplay
-import androidx.navigation3.runtime.entryProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.navigation.AppNavigationConfig
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.navigation.AppRouteSpec
-import com.topjohnwu.magisk.navigation.AppNavigator
-import com.topjohnwu.magisk.navigation.rememberAppNavigator
-import com.topjohnwu.magisk.ui.component.MagiskContentColumn
-import com.topjohnwu.magisk.ui.component.MagiskEmptyState
+import com.topjohnwu.magisk.ui.component.MagiskBackButton
+import com.topjohnwu.magisk.ui.component.MagiskNavigationBar
+import com.topjohnwu.magisk.ui.component.MagiskTopBar
+import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
+import com.topjohnwu.magisk.ui.component.MagiskNavigationBarStyle
 import com.topjohnwu.magisk.ui.component.MagiskSnackbarHost
 import com.topjohnwu.magisk.ui.component.MagiskTopBar
+import com.topjohnwu.magisk.ui.deny.DenyListScreen
+import com.topjohnwu.magisk.ui.deny.DenyListTopBarActions
+import com.topjohnwu.magisk.ui.flash.FlashScreen
+import com.topjohnwu.magisk.ui.flash.FlashTopBarActions
+import com.topjohnwu.magisk.ui.home.HomeScreen
+import com.topjohnwu.magisk.ui.home.HomeTopBarActions
+import com.topjohnwu.magisk.ui.install.InstallScreen
+import com.topjohnwu.magisk.ui.install.InstallTopBarActions
+import com.topjohnwu.magisk.ui.log.LogsTopBarActions
+import com.topjohnwu.magisk.ui.log.LogsScreen
+import com.topjohnwu.magisk.ui.module.ModuleActionScreen
+import com.topjohnwu.magisk.ui.module.ModuleActionTopBarActions
+import com.topjohnwu.magisk.ui.module.ModulesTopBarActions
+import com.topjohnwu.magisk.ui.module.ModulesScreen
+import com.topjohnwu.magisk.ui.settings.SettingsScreen
+import com.topjohnwu.magisk.ui.settings.LanguageScreen
+import com.topjohnwu.magisk.ui.settings.LanguageTopBarActions
+import com.topjohnwu.magisk.ui.superuser.SuperuserLogsTopBarActions
+import com.topjohnwu.magisk.ui.superuser.SuperuserLogsScreen
+import com.topjohnwu.magisk.ui.superuser.SuperuserScreen
 import com.topjohnwu.magisk.ui.theme.MagiskTheme
+import com.topjohnwu.magisk.ui.theme.MagiskThemeController
+import com.topjohnwu.magisk.ui.theme.ThemeScreen
+import com.topjohnwu.magisk.ui.theme.shouldUseDarkTheme
+import com.topjohnwu.magisk.ui.update.AppUpdateScreen
+import com.topjohnwu.magisk.arch.VMFactory
+import com.topjohnwu.magisk.viewmodel.deny.DenyListViewModel
+import com.topjohnwu.magisk.viewmodel.flash.FlashViewModel
+import com.topjohnwu.magisk.viewmodel.home.HomeViewModel
+import com.topjohnwu.magisk.viewmodel.install.InstallViewModel
+import com.topjohnwu.magisk.viewmodel.log.MagiskLogViewModel
+import com.topjohnwu.magisk.viewmodel.module.ModuleActionViewModel
+import com.topjohnwu.magisk.viewmodel.module.ModuleViewModel
+import com.topjohnwu.magisk.viewmodel.settings.SettingsViewModel
+import com.topjohnwu.magisk.viewmodel.superuser.SuperuserLogsViewModel
+import com.topjohnwu.magisk.core.R as CoreR
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MagiskAppContainer(
     openSection: String? = null,
-    backStack: SnapshotStateList<AppRoute> = remember { mutableStateListOf(AppRoute.Home) },
     overlay: @Composable () -> Unit = {}
 ) {
-    val navigator = rememberAppNavigator(backStack)
+    val navController = rememberNavController()
+    val themeState by MagiskThemeController.state.collectAsState()
 
-    MagiskTheme {
+    MagiskTheme(
+        themeOption = themeState.themeOption,
+        darkTheme = shouldUseDarkTheme(themeState.darkThemeMode),
+        themeVersion = themeState.customColorVersion
+    ) {
         LaunchedEffect(openSection) {
             val route = AppNavigationConfig.routeFromSection(openSection)
             if (route != AppNavigationConfig.startRoute) {
-                navigator.navigateTopLevel(route)
+                navController.navigateTopLevel(AppNavigationConfig.specFor(route))
             }
         }
 
-        BackHandler(enabled = backStack.size > 1) {
-            navigator.navigateBack()
+        val snackbarHostState = remember { SnackbarHostState() }
+        val currentBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentSpec = AppNavigationConfig.specForGraphKey(
+            currentBackStackEntry?.destination?.route
+        )
+        val topBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+        val topBarActions = currentBackStackEntry?.let { entry ->
+            appTopBarActions(
+                spec = currentSpec,
+                entry = entry
+            )
         }
 
-        val snackbarHostState = remember { SnackbarHostState() }
-        val currentRoute = backStack.lastOrNull() ?: AppRoute.Home
-        val currentSpec = AppNavigationConfig.specFor(currentRoute)
-
         Scaffold(
+            modifier = Modifier.nestedScroll(topBarScrollBehavior.nestedScrollConnection),
             topBar = {
-                MagiskTopBar(title = stringResource(currentSpec.labelRes))
+                val title = appBarTitle(currentSpec, currentBackStackEntry)
+                AnimatedContent(
+                    targetState = TopBarState(
+                        graphKey = currentSpec.graphKey,
+                        title = title,
+                        showBackButton = !currentSpec.isNavigationBarDestination
+                    ),
+                    transitionSpec = {
+                        fadeIn(tween(220)) togetherWith fadeOut(tween(120))
+                    },
+                    label = "MagiskTopBarTransition"
+                ) { state ->
+                    MagiskTopBar(
+                        title = state.title,
+                        navigationIcon = {
+                            if (state.showBackButton) {
+                                MagiskBackButton(
+                                    onClick = { navController.navigateUp() },
+                                    contentDescription = stringResource(CoreR.string.back)
+                                )
+                            }
+                        },
+                        actions = {
+                            if (state.graphKey == currentSpec.graphKey) {
+                                topBarActions?.invoke(this)
+                            }
+                        },
+                        scrollBehavior = topBarScrollBehavior
+                    )
+                }
             },
             bottomBar = {
-                MagiskNavigationBar(
-                    currentSpec = currentSpec,
-                    navigator = navigator
-                )
+                if (currentSpec.isNavigationBarDestination) {
+                    val navigationBottomInset = WindowInsets.navigationBars
+                        .asPaddingValues()
+                        .calculateBottomPadding()
+                    val navigationBarStyle = when (themeState.bottomBarStyle) {
+                        Config.Value.BOTTOM_BAR_FLOATING -> {
+                            MagiskNavigationBarStyle.Floating
+                        }
+                        Config.Value.BOTTOM_BAR_FIXED -> {
+                            MagiskNavigationBarStyle.Docked
+                        }
+                        else -> {
+                            if (navigationBottomInset <= 32.dp) {
+                                MagiskNavigationBarStyle.Floating
+                            } else {
+                                MagiskNavigationBarStyle.Docked
+                            }
+                        }
+                    }
+
+                    // Hide bottom bar when scrolling
+                    val bottomBarOffset by animateFloatAsState(
+                        targetValue = if (topBarScrollBehavior.state.heightOffset < -10f) 400f else 0f,
+                        animationSpec = spring(stiffness = Spring.StiffnessLow),
+                        label = "BottomBarOffset"
+                    )
+
+                    MagiskNavigationBar(
+                        currentSpec = currentSpec,
+                        onRouteSelected = navController::navigateTopLevel,
+                        style = navigationBarStyle,
+                        modifier = Modifier.graphicsLayer {
+                            translationY = bottomBarOffset
+                        }
+                    )
+                }
             },
             snackbarHost = { MagiskSnackbarHost(snackbarHostState) },
             containerColor = MaterialTheme.colorScheme.background
         ) { innerPadding ->
-            MagiskNavDisplay(
-                backStack = backStack,
-                innerPadding = innerPadding
+            val layoutDirection = LocalLayoutDirection.current
+            val adjustedPadding = PaddingValues(
+                start = innerPadding.calculateStartPadding(layoutDirection),
+                top = innerPadding.calculateTopPadding(),
+                end = innerPadding.calculateEndPadding(layoutDirection),
+                bottom = 0.dp
             )
+
+            Box(
+                modifier = Modifier
+                    .padding(adjustedPadding)
+                    .background(Color.Transparent)
+                    .clipToBounds()
+            ) {
+                MagiskNavHost(
+                    navController = navController,
+                    snackbarHostState = snackbarHostState
+                )
+            }
         }
         overlay()
     }
 }
 
 @Composable
-private fun MagiskNavDisplay(
-    backStack: SnapshotStateList<AppRoute>,
-    innerPadding: PaddingValues
+private fun MagiskNavHost(
+    navController: NavHostController,
+    snackbarHostState: SnackbarHostState
 ) {
-    val entryProvider = remember {
-        entryProvider {
-            entry<AppRoute.Home> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.Home)) }
-            entry<AppRoute.Superuser> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.Superuser)) }
-            entry<AppRoute.Modules> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.Modules)) }
-            entry<AppRoute.Logs> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.Logs)) }
-            entry<AppRoute.Settings> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.Settings)) }
-            entry<AppRoute.Install> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.Install)) }
-            entry<AppRoute.DenyList> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.DenyList)) }
-            entry<AppRoute.Theme> { MagiskRouteSlot(AppNavigationConfig.specFor(AppRoute.Theme)) }
-            entry<AppRoute.Flash> { route -> MagiskRouteSlot(AppNavigationConfig.specFor(route)) }
-            entry<AppRoute.ModuleAction> { route -> MagiskRouteSlot(AppNavigationConfig.specFor(route)) }
+    NavHost(
+        navController = navController,
+        startDestination = AppNavigationConfig.startGraphKey,
+        enterTransition = { magiskEnterTransition(isPop = false) },
+        exitTransition = { magiskExitTransition(isPop = false) },
+        popEnterTransition = { magiskEnterTransition(isPop = true) },
+        popExitTransition = { magiskExitTransition(isPop = true) }
+    ) {
+        composable("home") {
+            HomeScreen(
+                onNavigate = navController::navigateToAppRoute,
+                snackbarHostState = snackbarHostState
+            )
         }
-    }
-
-    Box(modifier = Modifier.padding(innerPadding)) {
-        NavDisplay(
-            backStack = backStack,
-            onBack = { backStack.removeLastOrNull() },
-            entryProvider = entryProvider
-        )
-    }
-}
-
-@Composable
-private fun MagiskNavigationBar(
-    currentSpec: AppRouteSpec,
-    navigator: AppNavigator
-) {
-    NavigationBar {
-        AppNavigationConfig.topLevelRoutes.forEach { spec ->
-            val selected = currentSpec.route.id == spec.route.id
-            NavigationBarItem(
-                selected = selected,
-                onClick = {
-                    navigator.navigateTopLevel(spec.route)
+        composable("app_update") {
+            AppUpdateScreen(
+                snackbarHostState = snackbarHostState
+            )
+        }
+        composable("superuser") {
+            SuperuserScreen(
+                onNavigate = navController::navigateToAppRoute,
+                snackbarHostState = snackbarHostState
+            )
+        }
+        composable("superuser_logs") {
+            SuperuserLogsScreen(
+                snackbarHostState = snackbarHostState
+            )
+        }
+        composable("modules") {
+            ModulesScreen(
+                onNavigate = navController::navigateToAppRoute,
+                snackbarHostState = snackbarHostState
+            )
+        }
+        composable("logs") {
+            LogsScreen(
+                onNavigate = navController::navigateToAppRoute,
+                snackbarHostState = snackbarHostState
+            )
+        }
+        composable("settings") {
+            SettingsScreen(
+                onNavigate = navController::navigateToAppRoute,
+                snackbarHostState = snackbarHostState
+            )
+        }
+        composable("install") {
+            InstallScreen(
+                onNavigate = navController::navigateToAppRoute,
+                snackbarHostState = snackbarHostState
+            )
+        }
+        composable("denylist") { entry ->
+            val denyListViewModel: DenyListViewModel = viewModel(
+                viewModelStoreOwner = entry,
+                factory = DenyListViewModel.Factory
+            )
+            DenyListScreen(
+                snackbarHostState = snackbarHostState,
+                viewModel = denyListViewModel
+            )
+        }
+        composable("theme") {
+            ThemeScreen()
+        }
+        composable("language") {
+            LanguageScreen(
+                onNavigate = navController::navigateToAppRoute,
+                snackbarHostState = snackbarHostState
+            )
+        }
+        composable(
+            route = "flash/{action}?data={data}",
+            arguments = listOf(
+                navArgument("action") {
+                    type = NavType.StringType
                 },
-                icon = {
-                    Icon(
-                        imageVector = spec.route.navigationIcon(),
-                        contentDescription = null
-                    )
+                navArgument("data") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { entry ->
+            FlashScreen(
+                action = entry.arguments?.getString("action").orEmpty(),
+                additionalData = entry.arguments?.getString("data"),
+                onBack = { navController.navigateUp() },
+                snackbarHostState = snackbarHostState
+            )
+        }
+        composable(
+            route = "module/{id}/action?name={name}",
+            arguments = listOf(
+                navArgument("id") {
+                    type = NavType.StringType
                 },
-                label = { Text(text = stringResource(spec.labelRes)) }
+                navArgument("name") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { entry ->
+            val actionName = entry.arguments?.getString("name").orEmpty()
+            ModuleActionScreen(
+                actionId = entry.arguments?.getString("id").orEmpty(),
+                actionName = actionName,
+                onBack = { navController.navigateUp() },
+                snackbarHostState = snackbarHostState
             )
         }
     }
 }
 
 @Composable
-private fun MagiskRouteSlot(spec: AppRouteSpec) {
-    MagiskContentColumn {
-        MagiskEmptyState(
-            title = stringResource(spec.labelRes),
-            icon = spec.route.navigationIcon()
-        )
+private fun appTopBarActions(
+    spec: AppRouteSpec,
+    entry: NavBackStackEntry
+): (@Composable RowScope.() -> Unit)? {
+    return when (spec.route) {
+        AppRoute.Home -> {
+            val viewModel: HomeViewModel = viewModel(
+                viewModelStoreOwner = entry,
+                factory = HomeViewModel.Factory
+            )
+            val lambda: @Composable RowScope.() -> Unit = {
+                HomeTopBarActions(viewModel)
+            }
+            lambda
+        }
+
+        AppRoute.Language -> {
+            val viewModel: SettingsViewModel = viewModel(
+                viewModelStoreOwner = entry,
+                factory = SettingsViewModel.Factory
+            )
+            val state by viewModel.state.collectAsState()
+            val lambda: @Composable RowScope.() -> Unit = {
+                LanguageTopBarActions(
+                    searchVisible = state.languageSearchVisible,
+                    onToggleSearch = viewModel::toggleLanguageSearch
+                )
+            }
+            lambda
+        }
+
+        AppRoute.DenyList -> {
+            val viewModel: DenyListViewModel = viewModel(
+                viewModelStoreOwner = entry,
+                factory = DenyListViewModel.Factory
+            )
+            val state by viewModel.state.collectAsState()
+            val lambda: @Composable RowScope.() -> Unit = {
+                DenyListTopBarActions(
+                    searchVisible = state.searchVisible,
+                    onToggleSearch = viewModel::toggleSearch,
+                    showSystem = state.showSystem,
+                    onShowSystemChange = viewModel::setShowSystem,
+                    showOs = state.showOs,
+                    onShowOsChange = viewModel::setShowOs,
+                    sortMethod = state.sortMethod,
+                    onSortMethodChange = viewModel::setSortMethod
+                )
+            }
+            lambda
+        }
+
+        AppRoute.Modules -> {
+            val viewModel: ModuleViewModel = viewModel(
+                viewModelStoreOwner = entry,
+                factory = ModuleViewModel.Factory
+            )
+            val state by viewModel.state.collectAsState()
+            val lambda: @Composable RowScope.() -> Unit = {
+                ModulesTopBarActions(
+                    searchVisible = state.searchVisible,
+                    onToggleSearch = viewModel::toggleSearch
+                )
+            }
+            lambda
+        }
+
+        AppRoute.Logs -> {
+            val viewModel: MagiskLogViewModel = viewModel(
+                viewModelStoreOwner = entry,
+                factory = MagiskLogViewModel.Factory
+            )
+            val state by viewModel.state.collectAsState()
+            val lambda: @Composable RowScope.() -> Unit = {
+                LogsTopBarActions(
+                    searchVisible = state.searchVisible,
+                    selectedFilter = state.filter,
+                    onToggleSearch = viewModel::toggleSearch,
+                    onFilterSelected = viewModel::setFilter,
+                    onSave = viewModel::saveMagiskLog,
+                    onClear = viewModel::clearMagiskLogs
+                )
+            }
+            lambda
+        }
+
+        AppRoute.SuperuserLogs -> {
+            val viewModel: SuperuserLogsViewModel = viewModel(
+                viewModelStoreOwner = entry,
+                factory = SuperuserLogsViewModel.Factory
+            )
+            val lambda: @Composable RowScope.() -> Unit = {
+                SuperuserLogsTopBarActions(
+                    onSave = viewModel::saveLogs,
+                    onClear = viewModel::clearLogs
+                )
+            }
+            lambda
+        }
+
+        is AppRoute.Flash -> {
+            val viewModel: FlashViewModel = viewModel(
+                viewModelStoreOwner = entry,
+                factory = FlashViewModel.Factory
+            )
+            val lambda: @Composable RowScope.() -> Unit = {
+                FlashTopBarActions(onSaveLog = viewModel::saveLog)
+            }
+            lambda
+        }
+
+        is AppRoute.ModuleAction -> {
+            val viewModel: ModuleActionViewModel = viewModel(
+                viewModelStoreOwner = entry,
+                factory = ModuleActionViewModel.Factory
+            )
+            val actionName = entry.arguments?.getString("name")
+                ?.let(Uri::decode)
+                .orEmpty()
+            val lambda: @Composable RowScope.() -> Unit = {
+                ModuleActionTopBarActions(
+                    onSaveLog = { viewModel.saveLog(actionName) }
+                )
+            }
+            lambda
+        }
+
+        AppRoute.Install -> {
+            val viewModel: InstallViewModel = viewModel(
+                viewModelStoreOwner = entry,
+                factory = VMFactory
+            )
+            val state by viewModel.uiState.collectAsState()
+            val lambda: @Composable RowScope.() -> Unit = {
+                InstallTopBarActions(
+                    state = state,
+                    canInstall = viewModel.canInstall,
+                    onInstall = viewModel::install
+                )
+            }
+            lambda
+        }
+
+        else -> null
     }
 }
 
-private fun AppRoute.navigationIcon(): ImageVector = when (this) {
-    AppRoute.Home -> Icons.Rounded.Home
-    AppRoute.Superuser -> Icons.Rounded.Security
-    AppRoute.Modules -> Icons.Rounded.Extension
-    AppRoute.Logs -> Icons.AutoMirrored.Rounded.Article
-    AppRoute.Settings -> Icons.Rounded.Settings
-    AppRoute.Install -> Icons.Rounded.SystemUpdate
-    AppRoute.DenyList -> Icons.Rounded.Security
-    AppRoute.Theme -> Icons.Rounded.Palette
-    is AppRoute.Flash,
-    is AppRoute.ModuleAction -> Icons.Rounded.Terminal
+@Composable
+private fun appBarTitle(
+    spec: AppRouteSpec,
+    entry: NavBackStackEntry?
+): String {
+    if (spec.route.id == "module_action") {
+        val actionName = entry?.arguments?.getString("name")
+            ?.let(Uri::decode)
+            ?.takeIf { it.isNotBlank() }
+        if (actionName != null) {
+            return actionName
+        }
+    }
+    return stringResource(spec.labelRes)
+}
+
+private fun NavHostController.navigateToAppRoute(route: AppRoute) {
+    if (AppNavigationConfig.isNavigationBarRoute(route)) {
+        navigateTopLevel(AppNavigationConfig.specFor(route))
+    } else {
+        navigate(AppNavigationConfig.routeString(route))
+    }
+}
+
+private fun NavHostController.navigateTopLevel(spec: AppRouteSpec) {
+    navigate(spec.graphKey) {
+        popUpTo(AppNavigationConfig.startGraphKey) {
+            saveState = true
+        }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+private data class TopBarState(
+    val graphKey: String,
+    val title: String,
+    val showBackButton: Boolean
+)
+
+private val EmphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+
+private fun magiskEnterTransition(isPop: Boolean): EnterTransition {
+    val direction = if (isPop) -1 else 1
+    return slideInHorizontally(
+        initialOffsetX = { (it * 0.32f * direction).toInt() },
+        animationSpec = tween(380, easing = EmphasizedDecelerate)
+    ) + fadeIn(
+        initialAlpha = 0f,
+        animationSpec = tween(280, delayMillis = 50, easing = LinearOutSlowInEasing)
+    ) + scaleIn(
+        initialScale = 0.94f,
+        animationSpec = tween(380, easing = EmphasizedDecelerate)
+    )
+}
+
+private fun magiskExitTransition(isPop: Boolean): ExitTransition {
+    val direction = if (isPop) -1 else 1
+    return slideOutHorizontally(
+        targetOffsetX = { -(it * 0.32f * direction).toInt() },
+        animationSpec = tween(380, easing = EmphasizedDecelerate)
+    ) + fadeOut(
+        animationSpec = tween(120, easing = FastOutLinearInEasing)
+    ) + scaleOut(
+        targetScale = 0.94f,
+        animationSpec = tween(380, easing = EmphasizedDecelerate)
+    )
 }

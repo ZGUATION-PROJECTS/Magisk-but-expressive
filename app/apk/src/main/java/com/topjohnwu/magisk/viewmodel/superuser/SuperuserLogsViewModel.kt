@@ -13,6 +13,7 @@ import com.topjohnwu.magisk.core.ktx.toTime
 import com.topjohnwu.magisk.core.model.su.SuLog
 import com.topjohnwu.magisk.core.model.su.SuPolicy
 import com.topjohnwu.magisk.core.repository.LogRepository
+import com.topjohnwu.magisk.core.su.SuEvents
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils.outputStream
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -38,8 +40,7 @@ data class SuLogUiItem(
 )
 
 data class SuperuserLogsUiState(
-    val loading: Boolean = true,
-    val items: List<SuLogUiItem> = emptyList()
+    val loading: Boolean = true, val items: List<SuLogUiItem> = emptyList()
 )
 
 class SuperuserLogsViewModel(private val repo: LogRepository) : ViewModel() {
@@ -50,6 +51,15 @@ class SuperuserLogsViewModel(private val repo: LogRepository) : ViewModel() {
     val messages: SharedFlow<UiText> = _messages.asSharedFlow()
 
     private var refreshJob: Job? = null
+
+    init {
+        refresh()
+        viewModelScope.launch {
+            SuEvents.logUpdated.collectLatest {
+                refresh()
+            }
+        }
+    }
 
     fun refresh() {
         refreshJob?.cancel()
@@ -93,9 +103,14 @@ class SuperuserLogsViewModel(private val repo: LogRepository) : ViewModel() {
                 logFile.uri.toString()
             }
             withContext(Dispatchers.Main) {
-                result
-                    .onSuccess { path -> _messages.emit(uiText(CoreR.string.saved_to_path, path)) }
-                    .onFailure { _messages.emit(uiText(CoreR.string.failure)) }
+                result.onSuccess { path ->
+                        _messages.emit(
+                            uiText(
+                                CoreR.string.saved_to_path,
+                                path
+                            )
+                        )
+                    }.onFailure { _messages.emit(uiText(CoreR.string.failure)) }
             }
         }
     }
@@ -138,8 +153,7 @@ class SuperuserLogsViewModel(private val repo: LogRepository) : ViewModel() {
     companion object {
         val Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return SuperuserLogsViewModel(ServiceLocator.logRepo) as T
+                @Suppress("UNCHECKED_CAST") return SuperuserLogsViewModel(ServiceLocator.logRepo) as T
             }
         }
     }

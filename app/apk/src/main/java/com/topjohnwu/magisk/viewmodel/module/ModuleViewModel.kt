@@ -11,6 +11,7 @@ import com.topjohnwu.magisk.core.AppContext
 import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.model.module.LocalModule
 import com.topjohnwu.magisk.core.model.module.OnlineModule
+import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -48,7 +49,8 @@ data class ModuleUiState(
     val loading: Boolean = true,
     val modules: List<ModuleUiItem> = emptyList(),
     val filteredModules: List<ModuleUiItem> = emptyList(),
-    val searchQuery: String = ""
+    val searchQuery: String = "",
+    val searchVisible: Boolean = false
 )
 
 class ModuleViewModel(
@@ -80,7 +82,8 @@ class ModuleViewModel(
             if (!hadModules) {
                 _state.update { it.copy(loading = true) }
             }
-            val list = if (Info.env.isActive && isModuleRepoLoaded()) {
+            val runtime = MagiskRuntimeEngine.snapshot()
+            val list = if (runtime.isInstalled && isModuleRepoLoaded()) {
                 readInstalledModules()
             } else {
                 emptyList()
@@ -125,6 +128,16 @@ class ModuleViewModel(
 
     fun clearSearch() {
         setSearchQuery("")
+    }
+
+    fun toggleSearch() {
+        _state.update {
+            if (it.searchVisible) {
+                it.withSearchQuery("").copy(searchVisible = false)
+            } else {
+                it.copy(searchVisible = true)
+            }
+        }
     }
 
     fun toggleEnabled(id: String) = updateModule(id) { it.enable = !it.enable }
@@ -172,28 +185,23 @@ class ModuleViewModel(
 
         val Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return ModuleViewModel { LocalModule.installed() } as T
+                @Suppress("UNCHECKED_CAST") return ModuleViewModel { LocalModule.installed() } as T
             }
         }
     }
 }
 
 private fun ModuleUiState.withModules(
-    modules: List<ModuleUiItem>,
-    loading: Boolean = this.loading
+    modules: List<ModuleUiItem>, loading: Boolean = this.loading
 ): ModuleUiState {
     return copy(
-        loading = loading,
-        modules = modules,
-        filteredModules = modules.filteredBy(searchQuery)
+        loading = loading, modules = modules, filteredModules = modules.filteredBy(searchQuery)
     )
 }
 
 private fun ModuleUiState.withSearchQuery(query: String): ModuleUiState {
     return copy(
-        searchQuery = query,
-        filteredModules = modules.filteredBy(query)
+        searchQuery = query, filteredModules = modules.filteredBy(query)
     )
 }
 
@@ -206,10 +214,11 @@ private fun LocalModule.toUiItem(expanded: Boolean = false): ModuleUiItem {
     val zygiskLabel = AppContext.getString(CoreR.string.zygisk)
     val safeName = name.ifBlank { id }
     val safeDescription = description
+    val runtime = MagiskRuntimeEngine.snapshot()
     val noticeText: UiText? = when {
         zygiskUnloaded -> uiText(CoreR.string.zygisk_module_unloaded)
-        Info.isZygiskEnabled && isRiru -> uiText(CoreR.string.suspend_text_riru, zygiskLabel)
-        !Info.isZygiskEnabled && isZygisk -> uiText(CoreR.string.suspend_text_zygisk, zygiskLabel)
+        runtime.isZygiskEnabled && isRiru -> uiText(CoreR.string.suspend_text_riru, zygiskLabel)
+        !runtime.isZygiskEnabled && isZygisk -> uiText(CoreR.string.suspend_text_zygisk, zygiskLabel)
         else -> null
     }
     return ModuleUiItem(

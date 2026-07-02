@@ -1,7 +1,9 @@
 package com.topjohnwu.magisk.ui.component
 
 import androidx.annotation.StringRes
+import android.widget.TextView
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Badge
@@ -14,13 +16,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.core.di.ServiceLocator
 
 @Composable
 fun UiText.asString(): String {
@@ -34,6 +39,32 @@ fun UiText.asString(): String {
 fun stringResource(text: UiText): String = text.asString()
 
 @Composable
+fun MagiskMarkdown(
+    markdown: String,
+    modifier: Modifier = Modifier
+) {
+    val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
+    val linkColor = MaterialTheme.colorScheme.primary.toArgb()
+
+    AndroidView(
+        modifier = modifier.fillMaxWidth(),
+        factory = { context ->
+            TextView(context).apply {
+                setTextColor(textColor)
+                setLinkTextColor(linkColor)
+                textSize = 14f
+                setLineSpacing(0f, 1.12f)
+            }
+        },
+        update = { textView ->
+            textView.setTextColor(textColor)
+            textView.setLinkTextColor(linkColor)
+            ServiceLocator.markwon.setMarkdown(textView, markdown)
+        }
+    )
+}
+
+@Composable
 fun MagiskIconBadge(
     icon: ImageVector,
     modifier: Modifier = Modifier,
@@ -45,9 +76,7 @@ fun MagiskIconBadge(
     iconTint: Color = MaterialTheme.colorScheme.onPrimaryContainer
 ) {
     Surface(
-        modifier = modifier.size(size),
-        shape = shape,
-        color = containerColor
+        modifier = modifier.size(size), shape = shape, color = containerColor
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
@@ -68,9 +97,7 @@ fun MagiskInfoPill(
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)
 ) {
     Surface(
-        modifier = modifier,
-        shape = MagiskComponentDefaults.PillShape,
-        color = containerColor
+        modifier = modifier, shape = MagiskComponentDefaults.PillShape, color = containerColor
     ) {
         Text(
             text = text,
@@ -101,12 +128,9 @@ fun MagiskInfoPill(
 
 @Composable
 fun MagiskStatusDot(
-    color: Color,
-    modifier: Modifier = Modifier,
-    size: Dp = 8.dp
+    color: Color, modifier: Modifier = Modifier, size: Dp = 8.dp
 ) {
     Badge(
-        modifier = modifier.size(size),
-        containerColor = color
+        modifier = modifier.size(size), containerColor = color
     )
 }

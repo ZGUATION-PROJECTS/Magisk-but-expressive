@@ -19,6 +19,10 @@ import com.topjohnwu.magisk.core.tasks.AppMigration
 import com.topjohnwu.magisk.core.utils.LocaleSetting
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils
 import com.topjohnwu.magisk.core.utils.RootUtils
+import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
+import com.topjohnwu.magisk.runtime.MagiskRuntimeState
+import com.topjohnwu.magisk.ui.theme.MagiskThemeController
+import com.topjohnwu.magisk.ui.theme.ThemeCustomColors
 import com.topjohnwu.magisk.ui.theme.ThemeOption
 import com.topjohnwu.magisk.view.Shortcuts
 import com.topjohnwu.superuser.Shell
@@ -30,14 +34,18 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.topjohnwu.magisk.core.R as CoreR
 
 data class SettingsUiState(
+    val runtime: MagiskRuntimeState = MagiskRuntimeEngine.snapshot(),
     val darkThemeMode: Int = Config.darkTheme,
+    val bottomBarStyle: Int = Config.bottomBarStyle,
     val themeOrdinal: Int = Config.themeOrdinal,
-    val selectedThemeIndex: Int = ThemeOption.displayOrder.indexOf(ThemeOption.selected).coerceAtLeast(0),
+    val selectedThemeIndex: Int = ThemeOption.displayOrder.indexOf(ThemeOption.selected)
+        .coerceAtLeast(0),
     @param:StringRes val themeNameRes: Int = ThemeOption.selected.labelRes,
     val useLocaleManager: Boolean = LocaleSetting.useLocaleManager,
     val languageSystemName: String = LocaleSetting.instance.appLocale?.let { it.getDisplayName(it) }
@@ -45,11 +53,12 @@ data class SettingsUiState(
     val languageIndex: Int = LocaleSetting.available.tags.indexOf(Config.locale)
         .let { if (it < 0) 0 else it },
     val languageName: String = LocaleSetting.available.names.getOrElse(
-        LocaleSetting.available.tags.indexOf(Config.locale).let { if (it < 0) 0 else it }
-    ) { AppContext.getString(CoreR.string.system_default) },
-    val canAddShortcut: Boolean = isRunningAsStub &&
-        ShortcutManagerCompat.isRequestPinShortcutSupported(AppContext),
-    val canMigrateApp: Boolean = Info.env.isActive && Const.USER_ID == 0,
+        LocaleSetting.available.tags.indexOf(Config.locale)
+            .let { if (it < 0) 0 else it }) { AppContext.getString(CoreR.string.system_default) },
+    val canAddShortcut: Boolean = isRunningAsStub && ShortcutManagerCompat.isRequestPinShortcutSupported(
+        AppContext
+    ),
+    val canMigrateApp: Boolean = runtime.canMigrateApp,
     val isHiddenApp: Boolean = AppContext.packageName != BuildConfig.APP_PACKAGE_NAME,
     val checkUpdate: Boolean = Config.checkUpdate,
     val updateChannel: Int = Config.updateChannel,
@@ -62,12 +71,12 @@ data class SettingsUiState(
     val downloadDirPath: String = MediaStoreUtils.fullPath(Config.downloadDir),
     val randName: Boolean = Config.randName,
     val zygisk: Boolean = Config.zygisk,
-    val zygiskMismatch: Boolean = Config.zygisk != Info.isZygiskEnabled,
+    val zygiskMismatch: Boolean = Config.zygisk != runtime.isZygiskEnabled,
     val denyList: Boolean = Config.denyList,
-    val showMagisk: Boolean = Info.env.isActive,
-    val showMagiskAdvanced: Boolean = Info.env.isActive && Const.Version.atLeast_24_0(),
-    val showDenyListConfig: Boolean = Const.Version.atLeast_24_0(),
-    val showSuperuser: Boolean = Info.showSuperUser,
+    val showMagisk: Boolean = runtime.canShowMagiskSettings,
+    val showMagiskAdvanced: Boolean = runtime.canShowMagiskAdvancedSettings,
+    val showDenyListConfig: Boolean = runtime.canShowDenyListConfig,
+    val showSuperuser: Boolean = runtime.canShowSuperuser,
     val deviceSecure: Boolean = Info.isDeviceSecure,
     val suTapjack: Boolean = Config.suTapjack,
     val suAuth: Boolean = Config.suAuth,
@@ -92,18 +101,22 @@ data class SettingsUiState(
     val suTimeoutIndex: Int = SU_TIMEOUT_VALUES.indexOf(Config.suDefaultTimeout)
         .let { if (it < 0) 0 else it },
     val requestTimeoutName: String = AppContext.resources.getStringArray(CoreR.array.request_timeout)
-        .getOrElse(SU_TIMEOUT_VALUES.indexOf(Config.suDefaultTimeout).let { if (it < 0) 0 else it }) { "-" },
+        .getOrElse(
+            SU_TIMEOUT_VALUES.indexOf(Config.suDefaultTimeout)
+                .let { if (it < 0) 0 else it }) { "-" },
     val suNotification: Int = Config.suNotification,
     val suNotificationName: String = AppContext.resources.getStringArray(CoreR.array.su_notification)
         .getOrElse(Config.suNotification) { "-" },
     val suReAuth: Boolean = Config.suReAuth,
     val showReauthenticate: Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.O,
     val suRestrict: Boolean = Config.suRestrict,
-    val showRestrict: Boolean = Const.Version.atLeast_30_1()
+    val showRestrict: Boolean = Const.Version.atLeast_30_1(),
+    val languageSearchQuery: String = "",
+    val languageSearchVisible: Boolean = false
 )
 
 class SettingsViewModel : ViewModel() {
-    private val _state = MutableStateFlow(snapshotState())
+    private val _state = MutableStateFlow(SettingsUiState())
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
 
     private val _messages = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
@@ -120,13 +133,22 @@ class SettingsViewModel : ViewModel() {
     }
 
     fun setDarkMode(mode: Int) {
-        Config.darkTheme = mode
+        MagiskThemeController.setDarkMode(mode)
         updateSnapshot()
     }
 
     fun setThemeIndex(index: Int) {
-        val option = ThemeOption.displayOrder.getOrNull(index) ?: ThemeOption.Default
-        Config.themeOrdinal = if (option == ThemeOption.Default) -1 else option.ordinal
+        MagiskThemeController.setThemeIndex(index)
+        updateSnapshot()
+    }
+
+    fun setCustomTheme(colors: ThemeCustomColors) {
+        MagiskThemeController.setCustomColors(colors)
+        updateSnapshot()
+    }
+
+    fun setBottomBarStyle(style: Int) {
+        MagiskThemeController.setBottomBarStyle(style)
         updateSnapshot()
     }
 
@@ -209,7 +231,7 @@ class SettingsViewModel : ViewModel() {
     fun setZygisk(value: Boolean) {
         Config.zygisk = value
         updateSnapshot()
-        if (value != Info.isZygiskEnabled) {
+        if (value != MagiskRuntimeEngine.snapshot().isZygiskEnabled) {
             _messages.tryEmit(uiText(CoreR.string.reboot_apply_change))
         }
     }
@@ -279,21 +301,31 @@ class SettingsViewModel : ViewModel() {
         updateSnapshot()
     }
 
+    fun toggleLanguageSearch() {
+        _state.update { it.copy(languageSearchVisible = !it.languageSearchVisible, languageSearchQuery = "") }
+    }
+
+    fun setLanguageSearchQuery(query: String) {
+        _state.update { it.copy(languageSearchQuery = query) }
+    }
+
     fun setMessageRes(res: Int) {
         _messages.tryEmit(uiText(res))
     }
 
-    private fun snapshotState(): SettingsUiState = SettingsUiState()
-
     private fun updateSnapshot() {
-        _state.value = snapshotState()
+        _state.update {
+            SettingsUiState(
+                languageSearchQuery = it.languageSearchQuery,
+                languageSearchVisible = it.languageSearchVisible
+            )
+        }
     }
 
     companion object {
         val Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return SettingsViewModel() as T
+                @Suppress("UNCHECKED_CAST") return SettingsViewModel() as T
             }
         }
     }

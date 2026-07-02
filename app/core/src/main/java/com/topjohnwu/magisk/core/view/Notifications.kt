@@ -35,16 +35,47 @@ object Notifications {
     fun setup() {
         AppContext.apply {
             if (SDK_INT >= Build.VERSION_CODES.O) {
-                val channel = NotificationChannel(UPDATE_CHANNEL,
-                    getString(R.string.update_channel), NotificationManager.IMPORTANCE_DEFAULT)
-                val channel2 = NotificationChannel(PROGRESS_CHANNEL,
-                    getString(R.string.progress_channel), NotificationManager.IMPORTANCE_LOW)
-                val channel3 = NotificationChannel(UPDATED_CHANNEL,
-                    getString(R.string.updated_channel), NotificationManager.IMPORTANCE_HIGH)
-                val channel4 = NotificationChannel(SU_CHANNEL,
-                    getString(R.string.su_notification_channel), NotificationManager.IMPORTANCE_HIGH)
-                mgr.createNotificationChannels(listOf(channel, channel2, channel3, channel4))
+                mgr.createNotificationChannels(
+                    listOf(
+                        notificationChannel(
+                            id = UPDATE_CHANNEL,
+                            name = getString(R.string.update_channel),
+                            importance = NotificationManager.IMPORTANCE_DEFAULT,
+                            showBadge = true
+                        ),
+                        notificationChannel(
+                            id = PROGRESS_CHANNEL,
+                            name = getString(R.string.progress_channel),
+                            importance = NotificationManager.IMPORTANCE_LOW,
+                            showBadge = false
+                        ),
+                        notificationChannel(
+                            id = UPDATED_CHANNEL,
+                            name = getString(R.string.updated_channel),
+                            importance = NotificationManager.IMPORTANCE_HIGH,
+                            showBadge = true
+                        ),
+                        notificationChannel(
+                            id = SU_CHANNEL,
+                            name = getString(R.string.su_notification_channel),
+                            importance = NotificationManager.IMPORTANCE_HIGH,
+                            showBadge = false
+                        )
+                    )
+                )
             }
+        }
+    }
+
+    private fun notificationChannel(
+        id: String,
+        name: CharSequence,
+        importance: Int,
+        showBadge: Boolean
+    ): NotificationChannel {
+        return NotificationChannel(id, name, importance).apply {
+            lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+            setShowBadge(showBadge)
         }
     }
 
@@ -64,6 +95,7 @@ object Notifications {
                 .setContentTitle(getText(R.string.updated_title))
                 .setContentText(getText(R.string.updated_text))
                 .setAutoCancel(true)
+                .setVisibility(Notification.VISIBILITY_PRIVATE)
             mgr.notify(APP_UPDATED_ID, builder.build())
         }
     }
@@ -84,6 +116,7 @@ object Notifications {
                 .setContentText(getString(R.string.manager_download_install))
                 .setAutoCancel(true)
                 .setContentIntent(intent)
+                .setVisibility(Notification.VISIBILITY_PRIVATE)
 
             mgr.notify(APP_UPDATE_AVAILABLE_ID, builder.build())
         }
@@ -99,8 +132,19 @@ object Notifications {
             .setContentTitle(title)
             .setProgress(0, 0, true)
             .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setLocalOnly(true)
+            .setVisibility(Notification.VISIBILITY_PRIVATE)
         if (SDK_INT >= Build.VERSION_CODES.S)
             builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+        if (SDK_INT >= 36) {
+            runCatching {
+                val progressStyleClass = Class.forName("android.app.Notification\$ProgressStyle")
+                val progressStyleInstance = progressStyleClass.getConstructor().newInstance()
+                val setStyleMethod = builder.javaClass.getMethod("setStyle", Class.forName("android.app.Notification\$Style"))
+                setStyleMethod.invoke(builder, progressStyleInstance)
+            }
+        }
         return builder
     }
 
@@ -132,6 +176,7 @@ object Notifications {
                 .setContentText(text)
                 .setAutoCancel(true)
                 .setTimeoutAfter(SU_NOTIFICATION_TIMEOUT_MS)
+                .setVisibility(Notification.VISIBILITY_PRIVATE)
             mgr.notify(nextId(), builder.build())
         }
     }

@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -20,11 +19,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.topjohnwu.magisk.ui.component.card.MagiskCard
+
+import com.topjohnwu.magisk.ui.motion.MagiskAutoScrollToLatest
 
 @Composable
 fun MagiskTerminal(
@@ -33,19 +34,12 @@ fun MagiskTerminal(
     state: LazyListState = rememberLazyListState(),
     emptyText: String? = null
 ) {
-    LaunchedEffect(lines.size) {
-        val last = lines.lastIndex
-        if (last >= 0 && (!state.canScrollForward || state.firstVisibleItemIndex >= last - 4)) {
-            state.scrollToItem(last)
-        }
-    }
+    MagiskAutoScrollToLatest(itemCount = lines.size, state = state)
 
     MagiskCard(modifier = modifier.fillMaxSize()) {
         if (lines.isEmpty() && emptyText != null) {
             MagiskInlineMessage(
-                text = emptyText,
-                icon = Icons.Rounded.Terminal,
-                modifier = Modifier.padding(12.dp)
+                text = emptyText, icon = Icons.Rounded.Terminal, modifier = Modifier.padding(12.dp)
             )
         } else {
             LazyColumn(
@@ -58,8 +52,7 @@ fun MagiskTerminal(
                 itemsIndexed(
                     items = lines,
                     key = { index, _ -> index },
-                    contentType = { _, _ -> "terminal_line" }
-                ) { _, line ->
+                    contentType = { _, _ -> "terminal_line" }) { _, line ->
                     Text(
                         text = line,
                         modifier = Modifier.fillMaxWidth(),
@@ -77,8 +70,7 @@ fun MagiskTerminal(
 
 @Composable
 fun MagiskTerminalActions(
-    modifier: Modifier = Modifier,
-    content: @Composable RowScope.() -> Unit
+    modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -118,11 +110,6 @@ fun MagiskTerminalButton(
             Text(text = text)
         }
     }
-}
-
-@Composable
-fun MagiskSaveLogIcon() {
-    Icon(Icons.Rounded.Save, contentDescription = null)
 }
 
 @Composable

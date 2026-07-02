@@ -5,25 +5,36 @@ import androidx.annotation.StringRes
 import com.topjohnwu.magisk.core.Const
 import com.topjohnwu.magisk.core.R as CoreR
 
+enum class AppDestinationType {
+    NavigationBar,
+    SubScreen
+}
+
 data class AppRouteSpec(
     val route: AppRoute,
     val graphKey: String,
     @StringRes val labelRes: Int,
-    val topLevel: Boolean = false
-)
+    val type: AppDestinationType = AppDestinationType.SubScreen
+) {
+    val isNavigationBarDestination: Boolean
+        get() = type == AppDestinationType.NavigationBar
+}
 
 object AppNavigationConfig {
     val startRoute: AppRoute = AppRoute.Home
 
     val routes: List<AppRouteSpec> = listOf(
-        AppRouteSpec(AppRoute.Home, "home", CoreR.string.section_home, topLevel = true),
-        AppRouteSpec(AppRoute.Superuser, "superuser", CoreR.string.superuser, topLevel = true),
-        AppRouteSpec(AppRoute.Modules, "modules", CoreR.string.modules, topLevel = true),
-        AppRouteSpec(AppRoute.Logs, "logs", CoreR.string.logs, topLevel = true),
-        AppRouteSpec(AppRoute.Settings, "settings", CoreR.string.settings, topLevel = true),
+        AppRouteSpec(AppRoute.Home, "home", CoreR.string.section_home, AppDestinationType.NavigationBar),
+        AppRouteSpec(AppRoute.AppUpdate, "app_update", CoreR.string.update),
+        AppRouteSpec(AppRoute.Superuser, "superuser", CoreR.string.superuser, AppDestinationType.NavigationBar),
+        AppRouteSpec(AppRoute.SuperuserLogs, "superuser_logs", CoreR.string.superuser_logs),
+        AppRouteSpec(AppRoute.Modules, "modules", CoreR.string.modules, AppDestinationType.NavigationBar),
+        AppRouteSpec(AppRoute.Logs, "logs", CoreR.string.logs, AppDestinationType.NavigationBar),
+        AppRouteSpec(AppRoute.Settings, "settings", CoreR.string.settings, AppDestinationType.NavigationBar),
         AppRouteSpec(AppRoute.Install, "install", CoreR.string.install),
         AppRouteSpec(AppRoute.DenyList, "denylist", CoreR.string.denylist),
         AppRouteSpec(AppRoute.Theme, "theme", CoreR.string.section_theme),
+        AppRouteSpec(AppRoute.Language, "language", CoreR.string.language),
         AppRouteSpec(
             AppRoute.Flash(action = "{action}", additionalData = "{data}"),
             "flash/{action}?data={data}",
@@ -36,7 +47,7 @@ object AppNavigationConfig {
         )
     )
 
-    val topLevelRoutes: List<AppRouteSpec> = routes.filter { it.topLevel }
+    val topLevelRoutes: List<AppRouteSpec> = routes.filter { it.isNavigationBarDestination }
     val startGraphKey: String get() = routeString(startRoute)
 
     fun routeFromSection(section: String?): AppRoute = when (section) {
@@ -50,15 +61,33 @@ object AppNavigationConfig {
         return routes.first { it.route.id == route.id }
     }
 
+    fun specForGraphKey(graphKey: String?): AppRouteSpec {
+        val baseGraphKey = graphKey?.substringBefore("?")
+        return routes.firstOrNull {
+            it.graphKey == graphKey || it.graphKey.substringBefore("?") == baseGraphKey
+        } ?: specFor(startRoute)
+    }
+
+    fun isNavigationBarDestination(graphKey: String?): Boolean {
+        return specForGraphKey(graphKey).isNavigationBarDestination
+    }
+
+    fun isNavigationBarRoute(route: AppRoute): Boolean {
+        return specFor(route).isNavigationBarDestination
+    }
+
     fun routeString(route: AppRoute): String = when (route) {
         AppRoute.Home -> "home"
+        AppRoute.AppUpdate -> "app_update"
         AppRoute.Superuser -> "superuser"
+        AppRoute.SuperuserLogs -> "superuser_logs"
         AppRoute.Modules -> "modules"
         AppRoute.Logs -> "logs"
         AppRoute.Settings -> "settings"
         AppRoute.Install -> "install"
         AppRoute.DenyList -> "denylist"
         AppRoute.Theme -> "theme"
+        AppRoute.Language -> "language"
         is AppRoute.Flash -> {
             val action = Uri.encode(route.action)
             val data = route.additionalData?.let(Uri::encode).orEmpty()

@@ -1,6 +1,8 @@
 package com.topjohnwu.magisk.ui.component
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -42,7 +44,7 @@ fun MagiskSearchField(
         modifier = modifier.fillMaxWidth(),
         enabled = enabled,
         singleLine = true,
-        shape = MagiskComponentDefaults.ControlShape,
+        shape = CircleShape,
         leadingIcon = {
             Icon(Icons.Rounded.Search, contentDescription = null)
         },
@@ -63,10 +65,10 @@ fun MagiskSearchField(
             )
         },
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+            unfocusedBorderColor = Color.Transparent
         )
     )
 }

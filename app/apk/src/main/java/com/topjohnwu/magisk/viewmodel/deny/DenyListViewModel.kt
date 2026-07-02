@@ -25,14 +25,15 @@ import kotlinx.coroutines.withContext
 import com.topjohnwu.magisk.core.R as CoreR
 
 enum class DenyListSortMethod(@param:StringRes val labelRes: Int) {
-    ActiveFirst(CoreR.string.denylist_sort_active_first),
-    NameAsc(CoreR.string.denylist_sort_name_asc),
-    NameDesc(CoreR.string.denylist_sort_name_desc)
+    ActiveFirst(CoreR.string.denylist_sort_active_first), NameAsc(CoreR.string.denylist_sort_name_asc), NameDesc(
+        CoreR.string.denylist_sort_name_desc
+    )
 }
 
 data class DenyListUiState(
     val loading: Boolean = true,
     val query: String = "",
+    val searchVisible: Boolean = false,
     val showSystem: Boolean = false,
     val showOs: Boolean = false,
     val sortMethod: DenyListSortMethod = DenyListSortMethod.ActiveFirst,
@@ -55,13 +56,11 @@ class DenyListViewModel : ViewModel() {
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
             _state.update { it.copy(loading = true) }
-            runCatching { loadApps() }
-                .onSuccess { loaded ->
+            runCatching { loadApps() }.onSuccess { loaded ->
                     allApps = loaded
                     _state.update { it.copy(loading = false) }
                     applyFilters()
-                }
-                .onFailure {
+                }.onFailure {
                     _state.update { st -> st.copy(loading = false) }
                     _messages.tryEmit(uiText(it.message ?: ""))
                 }
@@ -77,11 +76,20 @@ class DenyListViewModel : ViewModel() {
         }
     }
 
+    fun toggleSearch() {
+        val current = _state.value
+        if (current.searchVisible) {
+            _state.update { it.copy(query = "", searchVisible = false) }
+            applyFilters()
+        } else {
+            _state.update { it.copy(searchVisible = true) }
+        }
+    }
+
     fun setShowSystem(value: Boolean) {
         _state.update {
             it.copy(
-                showSystem = value,
-                showOs = if (value) it.showOs else false
+                showSystem = value, showOs = if (value) it.showOs else false
             )
         }
         applyFilters()
@@ -214,26 +222,22 @@ class DenyListViewModel : ViewModel() {
     private fun applyFilters() {
         val current = _state.value
         val query = current.query.trim().lowercase()
-        val filtered = allApps.asSequence()
-            .filter { app ->
-                val visible = app.expanded ||
-                    app.checkedCount > 0 ||
-                    (current.showSystem || !app.isSystem) &&
-                    (app.isAppUid || current.showSystem && current.showOs)
+        val filtered = allApps.asSequence().filter { app ->
+                val visible =
+                    app.expanded || app.checkedCount > 0 || (current.showSystem || !app.isSystem) && (app.isAppUid || current.showSystem && current.showOs)
                 visible && (query.isBlank() || app.searchKey.contains(query))
-            }
-            .toList()
+            }.toList()
 
         val sorted = when (current.sortMethod) {
             DenyListSortMethod.ActiveFirst -> filtered.sortedWith(
                 compareBy({ it.checkedCount == 0 }, { it.sortKey }, { it.packageName })
             )
+
             DenyListSortMethod.NameAsc -> filtered.sortedWith(
                 compareBy({ it.sortKey }, { it.packageName })
             )
-            DenyListSortMethod.NameDesc -> filtered.sortedWith(
-                compareByDescending<DenyListAppUi> { it.sortKey }.thenByDescending { it.packageName }
-            )
+
+            DenyListSortMethod.NameDesc -> filtered.sortedWith(compareByDescending<DenyListAppUi> { it.sortKey }.thenByDescending { it.packageName })
         }
 
         _state.update { it.copy(items = sorted) }
@@ -244,8 +248,7 @@ class DenyListViewModel : ViewModel() {
         val pm = AppContext.packageManager
         val denyList = Shell.cmd("magisk --denylist ls").exec().out.map { CmdlineListItem(it) }
         pm.getInstalledApplications(MATCH_UNINSTALLED_PACKAGES_COMPAT).asSequence()
-            .filter { it.packageName != AppContext.packageName }
-            .mapNotNull { app ->
+            .filter { it.packageName != AppContext.packageName }.mapNotNull { app ->
                 runCatching {
                     val info = AppProcessInfo(app, pm, denyList)
                     if (info.processes.isEmpty()) {
@@ -266,12 +269,10 @@ class DenyListViewModel : ViewModel() {
                                     defaultSelection = it.isIsolated || it.isAppZygote || it.name == it.packageName,
                                     enabled = it.isEnabled
                                 )
-                            }
-                        )
+                            })
                     }
                 }.getOrNull()
-            }
-            .toList()
+            }.toList()
     }
 
     override fun onCleared() {
@@ -283,8 +284,7 @@ class DenyListViewModel : ViewModel() {
     companion object {
         val Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return DenyListViewModel() as T
+                @Suppress("UNCHECKED_CAST") return DenyListViewModel() as T
             }
         }
     }

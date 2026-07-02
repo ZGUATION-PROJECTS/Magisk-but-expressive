@@ -9,18 +9,18 @@ internal val MemChoThemeDefinition = ThemeDefinition(
     labelRes = CoreR.string.theme_option_memcho,
     seed = {
         ThemeSeed(
-            lightPrimary = Color(0xFF725C00),
-            darkPrimary = Color(0xFFE8C75D),
-            lightSecondary = Color(0xFF53643B),
-            darkSecondary = Color(0xFFBBCD99),
-            lightTertiary = Color(0xFF006A62),
-            darkTertiary = Color(0xFF65D9CE),
-            lightSurface = Color(0xFFFFFBF0),
-            darkSurface = Color(0xFF17130A),
-            lightOnSurface = Color(0xFF201B10),
-            darkOnSurface = Color(0xFFEAE1D0),
-            lightError = Color(0xFFBA1A1A),
-            darkError = Color(0xFFFFB4AB)
+            lightPrimary = Color(0xFFFFD54F),
+            darkPrimary = Color(0xFFFFE082),
+            lightSecondary = Color(0xFFFBC02D),
+            darkSecondary = Color(0xFFFFD54F),
+            lightTertiary = blend(Color(0xFFFFD54F), Color(0xFFFBC02D), 0.42f),
+            darkTertiary = blend(Color(0xFFFFE082), Color(0xFFFFD54F), 0.42f),
+            lightSurface = Color(0xFFFFFBEA),
+            darkSurface = Color(0xFF211E10),
+            lightOnSurface = Color(0xFF3E2723),
+            darkOnSurface = Color(0xFFFFF9C4),
+            lightError = Color(0xFFB00020),
+            darkError = Color(0xFFCF6679)
         )
     }
 )

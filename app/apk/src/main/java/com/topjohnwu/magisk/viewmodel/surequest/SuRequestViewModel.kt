@@ -35,8 +35,7 @@ data class SuRequestUiState(
 )
 
 class SuRequestViewModel(
-    policyDB: PolicyDao,
-    private val timeoutPrefs: SharedPreferences
+    policyDB: PolicyDao, private val timeoutPrefs: SharedPreferences
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(SuRequestUiState())
@@ -94,7 +93,9 @@ class SuRequestViewModel(
         val state = if (app == null) {
             val packageName = info.sharedUserId.toString()
             SuRequestUiState(
-                title = AppContext.getString(CoreR.string.shared_uid_label, info.sharedUserId.orEmpty()),
+                title = AppContext.getString(
+                    CoreR.string.shared_uid_label, info.sharedUserId.orEmpty()
+                ),
                 packageName = packageName,
                 selectedItemPosition = timeoutPrefs.getInt(packageName, 0),
                 useTapjackProtection = Config.suTapjack,
@@ -141,8 +142,7 @@ class SuRequestViewModel(
     }
 
     private inner class SuTimer(
-        private val millis: Long,
-        interval: Long
+        private val millis: Long, interval: Long
     ) : CountDownTimer(millis, interval) {
 
         override fun onTick(remains: Long) {

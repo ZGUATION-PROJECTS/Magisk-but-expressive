@@ -30,13 +30,12 @@ data class MagiskLogScreenUiState(
     val filteredLogs: List<MagiskLogUiItem> = emptyList(),
     val stats: LogStats = LogStats.Empty,
     val filter: LogDisplayFilter = LogDisplayFilter.ALL,
-    val searchQuery: String = ""
+    val searchQuery: String = "",
+    val searchVisible: Boolean = false
 )
 
 data class LogStats(
-    val total: Int,
-    val issues: Int,
-    val sources: Int
+    val total: Int, val issues: Int, val sources: Int
 ) {
     companion object {
         val Empty = LogStats(total = 0, issues = 0, sources = 0)
@@ -52,19 +51,16 @@ data class LogStats(
 }
 
 enum class LogDisplayFilter(@StringRes val labelRes: Int) {
-    ALL(CoreR.string.log_filter_all),
-    MAGISK(CoreR.string.log_filter_magisk),
-    SU(CoreR.string.log_filter_su),
-    ISSUES(CoreR.string.log_filter_issues)
+    ALL(CoreR.string.log_filter_all), MAGISK(CoreR.string.log_filter_magisk), SU(CoreR.string.log_filter_su), ISSUES(
+        CoreR.string.log_filter_issues
+    )
 }
 
 enum class MagiskLogLevel(val code: Char, val shortLabel: String) {
-    VERBOSE('V', "V"),
-    DEBUG('D', "D"),
-    INFO('I', "I"),
-    WARN('W', "W"),
-    ERROR('E', "E"),
-    FATAL('F', "F"),
+    VERBOSE('V', "V"), DEBUG('D', "D"), INFO('I', "I"), WARN('W', "W"), ERROR('E', "E"), FATAL(
+        'F',
+        "F"
+    ),
     UNKNOWN('?', "?");
 
     companion object {
@@ -85,18 +81,19 @@ data class MagiskLogUiItem(
     val tid: Int = 0
 ) {
     val isIssue: Boolean
-        get() = level == MagiskLogLevel.WARN ||
-            level == MagiskLogLevel.ERROR ||
-            level == MagiskLogLevel.FATAL
+        get() = level == MagiskLogLevel.WARN || level == MagiskLogLevel.ERROR || level == MagiskLogLevel.FATAL
 
     val isMagisk: Boolean
-        get() = tag.contains("magisk", ignoreCase = true) ||
-            message.contains("magisk", ignoreCase = true)
+        get() = tag.contains("magisk", ignoreCase = true) || message.contains(
+            "magisk",
+            ignoreCase = true
+        )
 
     val isSu: Boolean
-        get() = message.contains("su:", ignoreCase = true) ||
-            raw.contains("su:", ignoreCase = true) ||
-            tag.equals("su", ignoreCase = true)
+        get() = message.contains("su:", ignoreCase = true) || raw.contains(
+            "su:",
+            ignoreCase = true
+        ) || tag.equals("su", ignoreCase = true)
 
     val sourceLabel: String
         get() = when {
@@ -107,10 +104,10 @@ data class MagiskLogUiItem(
         }
 
     fun contains(query: String): Boolean {
-        return tag.contains(query, ignoreCase = true) ||
-            message.contains(query, ignoreCase = true) ||
-            raw.contains(query, ignoreCase = true) ||
-            timestamp.contains(query, ignoreCase = true)
+        return tag.contains(query, ignoreCase = true) || message.contains(
+            query,
+            ignoreCase = true
+        ) || raw.contains(query, ignoreCase = true) || timestamp.contains(query, ignoreCase = true)
     }
 }
 
@@ -155,6 +152,16 @@ class MagiskLogViewModel(private val repo: LogRepository) : ViewModel() {
         setSearchQuery("")
     }
 
+    fun toggleSearch() {
+        _state.update {
+            if (it.searchVisible) {
+                it.withSearchQuery("").copy(searchVisible = false)
+            } else {
+                it.copy(searchVisible = true)
+            }
+        }
+    }
+
     fun clearMagiskLogs() {
         repo.clearMagiskLogs {
             _messages.tryEmit(uiText(CoreR.string.logs_cleared))
@@ -176,8 +183,7 @@ class MagiskLogViewModel(private val repo: LogRepository) : ViewModel() {
                 logFile.toString()
             }
             withContext(Dispatchers.Main) {
-                result
-                    .onSuccess { _messages.emit(uiText(CoreR.string.saved_to_path, it)) }
+                result.onSuccess { _messages.emit(uiText(CoreR.string.saved_to_path, it)) }
                     .onFailure { _messages.emit(uiText(CoreR.string.failure)) }
             }
         }
@@ -186,16 +192,14 @@ class MagiskLogViewModel(private val repo: LogRepository) : ViewModel() {
     companion object {
         val Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return MagiskLogViewModel(ServiceLocator.logRepo) as T
+                @Suppress("UNCHECKED_CAST") return MagiskLogViewModel(ServiceLocator.logRepo) as T
             }
         }
     }
 }
 
 private fun MagiskLogScreenUiState.withLogs(
-    logs: List<MagiskLogUiItem>,
-    loading: Boolean
+    logs: List<MagiskLogUiItem>, loading: Boolean
 ): MagiskLogScreenUiState {
     return copy(
         loading = loading,
@@ -207,21 +211,18 @@ private fun MagiskLogScreenUiState.withLogs(
 
 private fun MagiskLogScreenUiState.withFilter(filter: LogDisplayFilter): MagiskLogScreenUiState {
     return copy(
-        filter = filter,
-        filteredLogs = logs.filteredBy(filter, searchQuery)
+        filter = filter, filteredLogs = logs.filteredBy(filter, searchQuery)
     )
 }
 
 private fun MagiskLogScreenUiState.withSearchQuery(query: String): MagiskLogScreenUiState {
     return copy(
-        searchQuery = query,
-        filteredLogs = logs.filteredBy(filter, query)
+        searchQuery = query, filteredLogs = logs.filteredBy(filter, query)
     )
 }
 
 private fun List<MagiskLogUiItem>.filteredBy(
-    filter: LogDisplayFilter,
-    query: String
+    filter: LogDisplayFilter, query: String
 ): List<MagiskLogUiItem> {
     val base = when (filter) {
         LogDisplayFilter.ALL -> this

@@ -7,9 +7,9 @@ import com.topjohnwu.magisk.arch.UiEffect
 import com.topjohnwu.magisk.core.AppContext
 import com.topjohnwu.magisk.core.BuildConfig.APP_VERSION_CODE
 import com.topjohnwu.magisk.core.Const
-import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.repository.NetworkService
 import com.topjohnwu.magisk.navigation.AppRoute
+import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,9 +35,10 @@ class InstallViewModel(svc: NetworkService) : BaseViewModel() {
         val showSecondSlotWarning: Boolean = false,
     )
 
-    val isRooted get() = Info.isRooted
-    val skipOptions = Info.isEmulator || (Info.isSAR && !Info.isFDE && Info.ramdisk)
-    val noSecondSlot = !isRooted || !Info.isAB || Info.isEmulator
+    private val runtime = MagiskRuntimeEngine.snapshot()
+    val isRooted get() = runtime.isRooted
+    val skipOptions = runtime.shouldSkipInstallOptions
+    val noSecondSlot = !runtime.canInstallToInactiveSlot
 
     private val _uiState = MutableStateFlow(UiState(step = if (skipOptions) 1 else 0))
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -126,10 +127,6 @@ class InstallViewModel(svc: NetworkService) : BaseViewModel() {
         }
 
     private fun normalizeMarkdown(input: String): String {
-        return input
-            .replace("\\r\\n", "\n")
-            .replace("\\n", "\n")
-            .replace("\r\n", "\n")
-            .trim()
+        return input.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\r\n", "\n").trim()
     }
 }

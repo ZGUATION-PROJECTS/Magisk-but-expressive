@@ -28,6 +28,7 @@ android {
         release {
             proguardFiles("proguard-rules.pro")
             isMinifyEnabled = true
+            isShrinkResources = true
         }
     }
 

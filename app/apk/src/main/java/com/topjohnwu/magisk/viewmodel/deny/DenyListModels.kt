@@ -35,9 +35,7 @@ const val ISOLATED_MAGIC = "isolated"
 
 @SuppressLint("InlinedApi")
 class AppProcessInfo(
-    private val info: ApplicationInfo,
-    pm: PackageManager,
-    denyList: List<CmdlineListItem>
+    private val info: ApplicationInfo, pm: PackageManager, denyList: List<CmdlineListItem>
 ) : Comparable<AppProcessInfo> {
 
     private val denyList = denyList.filter {
@@ -61,9 +59,8 @@ class AppProcessInfo(
     private fun createProcess(name: String, pkg: String = info.packageName) =
         ProcessInfo(name, pkg, denyList.any { it.process == name && it.packageName == pkg })
 
-    private fun ComponentInfo.getProcName(): String = processName
-        ?: applicationInfo.processName
-        ?: applicationInfo.packageName
+    private fun ComponentInfo.getProcName(): String =
+        processName ?: applicationInfo.processName ?: applicationInfo.packageName
 
     private val ServiceInfo.isIsolated get() = (flags and ServiceInfo.FLAG_ISOLATED_PROCESS) != 0
     private val ServiceInfo.useAppZygote get() = (flags and ServiceInfo.FLAG_USE_APP_ZYGOTE) != 0
@@ -77,8 +74,8 @@ class AppProcessInfo(
                 val proc = info.processName ?: info.packageName
                 createProcess("${proc}_zygote")
             } else {
-                val proc = if (SDK_INT >= Build.VERSION_CODES.Q)
-                    "${it.getProcName()}:${it.name}" else it.getProcName()
+                val proc =
+                    if (SDK_INT >= Build.VERSION_CODES.Q) "${it.getProcName()}:${it.name}" else it.getProcName()
                 createProcess(proc, ISOLATED_MAGIC)
             }
         } else {
@@ -87,8 +84,8 @@ class AppProcessInfo(
     }
 
     private fun fetchProcesses(pm: PackageManager): Collection<ProcessInfo> {
-        val flag = MATCH_DISABLED_COMPONENTS or MATCH_UNINSTALLED_PACKAGES_COMPAT or
-            GET_ACTIVITIES or GET_SERVICES or GET_RECEIVERS or GET_PROVIDERS
+        val flag =
+            MATCH_DISABLED_COMPONENTS or MATCH_UNINSTALLED_PACKAGES_COMPAT or GET_ACTIVITIES or GET_SERVICES or GET_RECEIVERS or GET_PROVIDERS
         val packageInfo = try {
             pm.getPackageInfo(info.packageName, flag)
         } catch (_: Exception) {
@@ -107,17 +104,13 @@ class AppProcessInfo(
     }
 
     companion object {
-        private val comparator = compareBy<AppProcessInfo>(
-            { it.label.lowercase(Locale.ROOT) },
-            { it.packageName }
-        )
+        private val comparator =
+            compareBy<AppProcessInfo>({ it.label.lowercase(Locale.ROOT) }, { it.packageName })
     }
 }
 
 data class ProcessInfo(
-    val name: String,
-    val packageName: String,
-    val isEnabled: Boolean
+    val name: String, val packageName: String, val isEnabled: Boolean
 ) {
     val isIsolated = packageName == ISOLATED_MAGIC
     val isAppZygote = name.endsWith("_zygote")
@@ -151,9 +144,7 @@ data class DenyListAppUi(
         get() = if (processes.isEmpty()) 0f else checkedCount.toFloat() / processes.size
 
     enum class SelectionState {
-        Checked,
-        Unchecked,
-        Indeterminate
+        Checked, Unchecked, Indeterminate
     }
 
     companion object {

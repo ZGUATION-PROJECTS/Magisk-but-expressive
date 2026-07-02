@@ -15,10 +15,11 @@ import com.topjohnwu.magisk.core.BuildConfig
 import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.di.ServiceLocator
-import com.topjohnwu.magisk.core.ktx.await
 import com.topjohnwu.magisk.core.repository.NetworkService
 import com.topjohnwu.magisk.core.tasks.MagiskInstaller
-import com.topjohnwu.superuser.Shell
+import com.topjohnwu.magisk.runtime.MagiskInstallState
+import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
+import com.topjohnwu.magisk.runtime.MagiskRuntimeState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,9 +38,7 @@ import java.util.Locale
 import com.topjohnwu.magisk.core.R as CoreR
 
 data class ContributorLink(
-    @param:StringRes val labelRes: Int,
-    @param:DrawableRes val iconRes: Int,
-    val url: String
+    @param:StringRes val labelRes: Int, @param:DrawableRes val iconRes: Int, val url: String
 )
 
 data class Contributor(
@@ -50,6 +49,7 @@ data class Contributor(
 )
 
 data class HomeUiState(
+    val runtime: MagiskRuntimeState = MagiskRuntimeEngine.snapshot(),
     val magiskState: HomeViewModel.State = HomeViewModel.State.INVALID,
     val magiskInstalledVersion: String = "",
     val appState: HomeViewModel.State = HomeViewModel.State.LOADING,
@@ -58,7 +58,7 @@ data class HomeUiState(
     val managerInstalledVersion: String = "",
     val updateChannel: Int = Config.updateChannel,
     val packageName: String = "",
-    val envActive: Boolean = Info.env.isActive,
+    val envActive: Boolean = runtime.isInstalled,
     val showHideRestore: Boolean = false,
     val showManagerInstall: Boolean = false,
     val envFixCode: Int = 0,
@@ -91,18 +91,14 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
     private var lastRefreshAt = 0L
 
     private val gitHubService: GitHubService by lazy {
-        Retrofit.Builder()
-            .baseUrl("https://api.github.com/")
-            .addConverterFactory(MoshiConverterFactory.create())
-            .build()
+        Retrofit.Builder().baseUrl("https://api.github.com/")
+            .addConverterFactory(MoshiConverterFactory.create()).build()
             .create(GitHubService::class.java)
     }
 
     fun refresh(force: Boolean = false) {
         val now = SystemClock.elapsedRealtime()
-        if (!force && _state.value.appState != HomeViewModel.State.LOADING &&
-            now - lastRefreshAt < MIN_REFRESH_INTERVAL_MS
-        ) {
+        if (!force && _state.value.appState != HomeViewModel.State.LOADING && now - lastRefreshAt < MIN_REFRESH_INTERVAL_MS) {
             return
         }
         lastRefreshAt = now
@@ -116,13 +112,15 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
                 BuildConfig.APP_VERSION_CODE < remote.versionCode -> HomeViewModel.State.OUTDATED
                 else -> HomeViewModel.State.UP_TO_DATE
             }
-            val magiskState = currentMagiskState()
+            val runtime = MagiskRuntimeEngine.snapshot()
+            val magiskState = runtime.toHomeState()
             _state.update {
                 it.copy(
+                    runtime = runtime,
                     magiskState = magiskState,
-                    magiskInstalledVersion = installedMagiskVersion(),
+                    magiskInstalledVersion = runtime.installedMagiskVersion,
                     appState = appState,
-                    managerInstalledVersion = installedManagerVersion(),
+                    managerInstalledVersion = runtime.installedManagerVersion,
                     managerRemoteVersion = remote?.run {
                         val debug = Config.updateChannel == Config.Value.DEBUG_CHANNEL
                         "$version ($versionCode)" + if (debug) " (D)" else ""
@@ -130,11 +128,11 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
                     managerReleaseNotes = remote?.note.orEmpty(),
                     updateChannel = Config.updateChannel,
                     packageName = AppContext.packageName,
-                    envActive = Info.env.isActive,
+                    envActive = runtime.isInstalled,
                     noticeVisible = Config.safetyNotice
                 )
             }
-            ensureEnv(magiskState)
+            ensureEnv(runtime)
         }
     }
 
@@ -189,8 +187,7 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
             _state.update { it.copy(contributors = cached, contributorsLoading = false) }
             return
         }
-        runCatching { gitHubService.getContributors(perPage = 30) }
-            .onSuccess { raw ->
+        runCatching { gitHubService.getContributors(perPage = 30) }.onSuccess { raw ->
                 val fetched = raw.mapNotNull { item ->
                     val login = item["login"] as? String ?: return@mapNotNull null
                     createContributor(
@@ -199,44 +196,31 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
                         htmlUrl = item["html_url"] as? String ?: ""
                     )
                 }
-                val priorityOrder = listOf("topjohnwu", "vvb2060", "yujincheng08", "rikkaw", "canyie")
+                val priorityOrder =
+                    listOf("topjohnwu", "vvb2060", "yujincheng08", "rikkaw", "canyie")
                 val fetchedMap = fetched.associateBy { it.login.lowercase(Locale.US) }
                 val ordered = priorityOrder.mapNotNull { fetchedMap[it] }
                 val finalList = withPinnedContributors(ordered.ifEmpty { fetched })
                 cacheContributors(finalList)
                 _state.update { it.copy(contributors = finalList, contributorsLoading = false) }
-            }
-            .onFailure {
+            }.onFailure {
                 _state.update {
-                    it.copy(contributors = withPinnedContributors(emptyList()), contributorsLoading = false)
+                    it.copy(
+                        contributors = withPinnedContributors(emptyList()),
+                        contributorsLoading = false
+                    )
                 }
             }
     }
 
-    private suspend fun ensureEnv(magiskState: HomeViewModel.State) {
-        if (magiskState == HomeViewModel.State.INVALID || checkedEnv) return
-        val cmd = "env_check ${Info.env.versionString} ${Info.env.versionCode}"
-        val code = runCatching { Shell.cmd(cmd).await().code }.getOrDefault(0)
+    private suspend fun ensureEnv(runtime: MagiskRuntimeState) {
+        if (!runtime.isInstalled || runtime.isUnsupported || checkedEnv) return
+        val code = MagiskRuntimeEngine.checkEnvironment(runtime)
         if (code != 0) {
             _state.update { it.copy(envFixCode = code) }
         }
         checkedEnv = true
     }
-
-    private fun currentMagiskState(): HomeViewModel.State = when {
-        Info.isRooted && Info.env.isUnsupported -> HomeViewModel.State.OUTDATED
-        !Info.env.isActive -> HomeViewModel.State.INVALID
-        Info.env.versionCode < BuildConfig.APP_VERSION_CODE -> HomeViewModel.State.OUTDATED
-        else -> HomeViewModel.State.UP_TO_DATE
-    }
-
-    private fun installedMagiskVersion(): String = Info.env.run {
-        if (isActive) "$versionString ($versionCode)" + if (isDebug) " (D)" else "" else ""
-    }
-
-    private fun installedManagerVersion(): String =
-        "${BuildConfig.APP_VERSION_NAME} (${BuildConfig.APP_VERSION_CODE})" +
-            if (BuildConfig.DEBUG) " (D)" else ""
 
     companion object {
         internal const val MIN_REFRESH_INTERVAL_MS = 1200L
@@ -247,36 +231,45 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
 
         val Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return HomeViewModel(ServiceLocator.networkService) as T
+                @Suppress("UNCHECKED_CAST") return HomeViewModel(ServiceLocator.networkService) as T
             }
         }
     }
 }
 
+private fun MagiskRuntimeState.toHomeState(): HomeViewModel.State = when (installState) {
+    MagiskInstallState.NotInstalled -> HomeViewModel.State.INVALID
+    MagiskInstallState.Installed -> HomeViewModel.State.UP_TO_DATE
+    MagiskInstallState.Outdated,
+    MagiskInstallState.Unsupported -> HomeViewModel.State.OUTDATED
+}
+
 private val maintainerLinks: Map<String, List<ContributorLink>> = mapOf(
     "topjohnwu" to listOf(
         ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/topjohnwu"),
-        ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/topjohnwu/Magisk")
-    ),
-    "vvb2060" to listOf(
+        ContributorLink(
+            CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/topjohnwu/Magisk"
+        )
+    ), "vvb2060" to listOf(
         ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/vvb2060"),
         ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/vvb2060")
-    ),
-    "yujincheng08" to listOf(
-        ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/yujincheng08"),
-        ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/yujincheng08"),
-        ContributorLink(CoreR.string.github, CoreR.drawable.ic_favorite, "https://github.com/sponsors/yujincheng08")
-    ),
-    "rikkaw" to listOf(
+    ), "yujincheng08" to listOf(
+        ContributorLink(
+            CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/yujincheng08"
+        ), ContributorLink(
+            CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/yujincheng08"
+        ), ContributorLink(
+            CoreR.string.github,
+            CoreR.drawable.ic_favorite,
+            "https://github.com/sponsors/yujincheng08"
+        )
+    ), "rikkaw" to listOf(
         ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/rikkaw_"),
         ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/RikkaW")
-    ),
-    "canyie" to listOf(
+    ), "canyie" to listOf(
         ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/canyieq"),
         ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/canyie")
-    ),
-    "anto426" to listOf(
+    ), "anto426" to listOf(
         ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/Anto426")
     )
 )

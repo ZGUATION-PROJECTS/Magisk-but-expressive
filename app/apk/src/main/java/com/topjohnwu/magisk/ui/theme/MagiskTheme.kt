@@ -5,18 +5,23 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Shapes
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.topjohnwu.magisk.core.Config
+import com.topjohnwu.magisk.ui.motion.ProvideMagiskMotionEngine
 import com.topjohnwu.magisk.ui.theme.themes.Black
 import com.topjohnwu.magisk.ui.theme.themes.ThemeCatalog
 import com.topjohnwu.magisk.ui.theme.themes.ThemeSeed
@@ -29,6 +34,7 @@ fun MagiskTheme(
     themeOption: ThemeOption = ThemeOption.selected,
     darkTheme: Boolean = shouldUseDarkTheme(),
     useDynamicColor: Boolean = true,
+    themeVersion: Int = 0,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -48,17 +54,30 @@ fun MagiskTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = MagiskTypography,
-        shapes = MagiskShapes,
-        content = content
-    )
+    key(themeOption, darkTheme, themeVersion) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = MagiskTypography,
+            shapes = MagiskShapes
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = colorScheme.background
+            ) {
+                ProvideMagiskMotionEngine(content)
+            }
+        }
+    }
 }
 
 @Composable
 fun shouldUseDarkTheme(): Boolean {
-    return when (Config.darkTheme) {
+    return shouldUseDarkTheme(Config.darkTheme)
+}
+
+@Composable
+fun shouldUseDarkTheme(mode: Int): Boolean {
+    return when (mode) {
         Config.Value.DARK_THEME_AMOLED -> true
         -1 -> isSystemInDarkTheme()
         0 -> false
@@ -95,10 +114,47 @@ private fun ThemeSeed.toColorScheme(darkTheme: Boolean): ColorScheme {
     val opposite = if (darkTheme) White else Black
 
     val primaryContainer = blend(primary, target, if (darkTheme) 0.42f else 0.78f)
-    val secondaryContainer = blend(secondary, target, if (darkTheme) 0.38f else 0.74f)
+    val secondaryContainer = blend(secondary, target, if (darkTheme) 0.40f else 0.76f)
     val tertiaryContainer = blend(tertiary, target, if (darkTheme) 0.40f else 0.76f)
-    val errorContainer = blend(error, target, if (darkTheme) 0.42f else 0.78f)
+    val errorContainer = blend(error, target, if (darkTheme) 0.40f else 0.78f)
     val surfaceVariant = blend(surface, opposite, if (darkTheme) 0.08f else 0.05f)
+    val surfaceContainerLowest = if (darkTheme) {
+        blend(surface, Black, 0.24f)
+    } else {
+        blend(surface, White, 0.72f)
+    }
+    val surfaceContainerLow = if (darkTheme) {
+        blend(surface, White, 0.03f)
+    } else {
+        blend(surface, opposite, 0.025f)
+    }
+    val surfaceContainer = if (darkTheme) {
+        blend(surface, White, 0.055f)
+    } else {
+        blend(surface, opposite, 0.04f)
+    }
+    val surfaceContainerHigh = if (darkTheme) {
+        blend(surface, White, 0.085f)
+    } else {
+        blend(surface, opposite, 0.065f)
+    }
+    val surfaceContainerHighest = if (darkTheme) {
+        blend(surface, White, 0.12f)
+    } else {
+        blend(surface, opposite, 0.09f)
+    }
+    val surfaceDim = if (darkTheme) {
+        blend(surface, Black, 0.18f)
+    } else {
+        blend(surface, opposite, 0.08f)
+    }
+    val surfaceBright = if (darkTheme) {
+        blend(surface, White, 0.16f)
+    } else {
+        blend(surface, White, 0.48f)
+    }
+    val inverseSurface = blend(surface, opposite, if (darkTheme) 0.86f else 0.80f)
+    val inversePrimary = blend(primary, opposite, if (darkTheme) 0.34f else 0.22f)
 
     return if (darkTheme) {
         darkColorScheme(
@@ -122,13 +178,20 @@ private fun ThemeSeed.toColorScheme(darkTheme: Boolean): ColorScheme {
             onBackground = onSurface,
             surface = surface,
             onSurface = onSurface,
+            surfaceDim = surfaceDim,
+            surfaceBright = surfaceBright,
+            surfaceContainerLowest = surfaceContainerLowest,
+            surfaceContainerLow = surfaceContainerLow,
+            surfaceContainer = surfaceContainer,
+            surfaceContainerHigh = surfaceContainerHigh,
+            surfaceContainerHighest = surfaceContainerHighest,
             surfaceVariant = surfaceVariant,
-            onSurfaceVariant = blend(onSurface, surface, 0.30f),
+            onSurfaceVariant = blend(onSurface, Black, 0.16f),
             outline = blend(onSurface, surface, 0.58f),
-            outlineVariant = blend(onSurface, surface, 0.76f),
-            inverseSurface = blend(surface, opposite, 0.82f),
-            inverseOnSurface = contentColorFor(blend(surface, opposite, 0.82f)),
-            inversePrimary = blend(primary, opposite, 0.28f),
+            outlineVariant = blend(onSurface, surface, 0.74f),
+            inverseSurface = inverseSurface,
+            inverseOnSurface = contentColorFor(inverseSurface),
+            inversePrimary = inversePrimary,
             surfaceTint = primary,
             scrim = Black
         )
@@ -154,13 +217,20 @@ private fun ThemeSeed.toColorScheme(darkTheme: Boolean): ColorScheme {
             onBackground = onSurface,
             surface = surface,
             onSurface = onSurface,
+            surfaceDim = surfaceDim,
+            surfaceBright = surfaceBright,
+            surfaceContainerLowest = surfaceContainerLowest,
+            surfaceContainerLow = surfaceContainerLow,
+            surfaceContainer = surfaceContainer,
+            surfaceContainerHigh = surfaceContainerHigh,
+            surfaceContainerHighest = surfaceContainerHighest,
             surfaceVariant = surfaceVariant,
-            onSurfaceVariant = blend(onSurface, surface, 0.30f),
+            onSurfaceVariant = blend(onSurface, White, 0.22f),
             outline = blend(onSurface, surface, 0.58f),
-            outlineVariant = blend(onSurface, surface, 0.76f),
-            inverseSurface = blend(surface, opposite, 0.78f),
-            inverseOnSurface = contentColorFor(blend(surface, opposite, 0.78f)),
-            inversePrimary = blend(primary, opposite, 0.18f),
+            outlineVariant = blend(onSurface, surface, 0.74f),
+            inverseSurface = inverseSurface,
+            inverseOnSurface = contentColorFor(inverseSurface),
+            inversePrimary = inversePrimary,
             surfaceTint = primary,
             scrim = Black
         )
@@ -170,7 +240,7 @@ private fun ThemeSeed.toColorScheme(darkTheme: Boolean): ColorScheme {
 private fun ColorScheme.toAmoledScheme(): ColorScheme = copy(
     background = Black,
     surface = Black,
-    surfaceVariant = Color(0xFF101010),
+    surfaceVariant = Color(0xFF0D0D0D),
     surfaceDim = Black,
     surfaceBright = Color(0xFF171717),
     surfaceContainerLowest = Black,

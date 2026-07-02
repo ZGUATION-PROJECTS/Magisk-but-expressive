@@ -75,6 +75,9 @@ object Config : PreferenceConfig, DBConfig {
     object Value {
         // Theme mode
         const val DARK_THEME_AMOLED = -2
+        const val BOTTOM_BAR_AUTO = 0
+        const val BOTTOM_BAR_FLOATING = 1
+        const val BOTTOM_BAR_FIXED = 2
 
         // Update channels
         const val DEFAULT_CHANNEL = -1
@@ -123,7 +126,7 @@ object Config : PreferenceConfig, DBConfig {
 
     var safetyNotice by preference(Key.SAFETY, true)
     var darkTheme by preference(Key.DARK_THEME, -1)
-    var themeOrdinal by preference(Key.THEME_ORDINAL, 0)
+    var themeOrdinal by preference(Key.THEME_ORDINAL, -1)
     var colorMode by preference(Key.COLOR_MODE, 0)
     var themeCustomLightPrimary by preference(Key.THEME_CUSTOM_LIGHT_PRIMARY, 0xFF4EAFF5.toInt())
     var themeCustomDarkPrimary by preference(Key.THEME_CUSTOM_DARK_PRIMARY, 0xFF4EAFF5.toInt())

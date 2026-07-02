@@ -25,6 +25,7 @@
             android:directBootAware="true"
             android:exported="false"
             android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
             tools:ignore="AppLinkUrlError">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

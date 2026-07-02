@@ -26,8 +26,7 @@ import java.util.Locale
 import com.topjohnwu.magisk.core.R as CoreR
 
 data class ModuleActionUiState(
-    val running: Boolean = false,
-    val success: Boolean = false
+    val running: Boolean = false, val success: Boolean = false
 )
 
 class ModuleActionViewModel : ViewModel() {
@@ -48,10 +47,8 @@ class ModuleActionViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             _state.update { it.copy(running = true, success = false) }
             val success = runCatching {
-                Shell.cmd("run_action ${shellQuote(actionId)}")
-                    .to(terminal.console, terminal.logs)
-                    .exec()
-                    .isSuccess
+                Shell.cmd("run_action ${shellQuote(actionId)}").to(terminal.console, terminal.logs)
+                    .exec().isSuccess
             }.getOrDefault(false)
             terminal.sync()
             withContext(Dispatchers.Main) {
@@ -70,8 +67,7 @@ class ModuleActionViewModel : ViewModel() {
                     AppContext.getString(CoreR.string.module_log_fallback).lowercase(Locale.ROOT)
                 }
                 val name = "%s_action_log_%s.log".format(
-                    safeName,
-                    System.currentTimeMillis().toTime(timeFormatStandard)
+                    safeName, System.currentTimeMillis().toTime(timeFormatStandard)
                 )
                 val file = MediaStoreUtils.getFile(name)
                 file.uri.outputStream().bufferedWriter().use(terminal::writeTo)
@@ -87,8 +83,7 @@ class ModuleActionViewModel : ViewModel() {
     companion object {
         val Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return ModuleActionViewModel() as T
+                @Suppress("UNCHECKED_CAST") return ModuleActionViewModel() as T
             }
         }
     }

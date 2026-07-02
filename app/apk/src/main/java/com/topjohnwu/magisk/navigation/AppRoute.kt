@@ -7,8 +7,16 @@ sealed interface AppRoute {
         override val id = "home"
     }
 
+    data object AppUpdate : AppRoute {
+        override val id = "app_update"
+    }
+
     data object Superuser : AppRoute {
         override val id = "superuser"
+    }
+
+    data object SuperuserLogs : AppRoute {
+        override val id = "superuser_logs"
     }
 
     data object Modules : AppRoute {
@@ -21,6 +29,10 @@ sealed interface AppRoute {
 
     data object Settings : AppRoute {
         override val id = "settings"
+    }
+
+    data object Language : AppRoute {
+        override val id = "language"
     }
 
     data object Install : AppRoute {

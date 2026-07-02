@@ -17,12 +17,12 @@ internal val CustomThemeDefinition = ThemeDefinition(
             lightTertiary = blend(
                 Color(Config.themeCustomLightPrimary),
                 Color(Config.themeCustomLightSecondary),
-                0.46f
+                0.42f
             ),
             darkTertiary = blend(
                 Color(Config.themeCustomDarkPrimary),
                 Color(Config.themeCustomDarkSecondary),
-                0.46f
+                0.42f
             ),
             lightSurface = Color(Config.themeCustomLightSurface),
             darkSurface = Color(Config.themeCustomDarkSurface),

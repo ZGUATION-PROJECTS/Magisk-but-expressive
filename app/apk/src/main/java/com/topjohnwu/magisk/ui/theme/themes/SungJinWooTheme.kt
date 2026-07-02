@@ -9,18 +9,18 @@ internal val SungJinWooThemeDefinition = ThemeDefinition(
     labelRes = CoreR.string.theme_option_sung_jinwoo,
     seed = {
         ThemeSeed(
-            lightPrimary = Color(0xFF5945A8),
-            darkPrimary = Color(0xFFC7BFFF),
-            lightSecondary = Color(0xFF5F5B71),
-            darkSecondary = Color(0xFFC9C3DC),
-            lightTertiary = Color(0xFF006C5D),
-            darkTertiary = Color(0xFF72DCCB),
-            lightSurface = Color(0xFFFCF8FF),
-            darkSurface = Color(0xFF12111A),
-            lightOnSurface = Color(0xFF1D1A24),
-            darkOnSurface = Color(0xFFE6E0EC),
-            lightError = Color(0xFFBA1A1A),
-            darkError = Color(0xFFFFB4AB)
+            lightPrimary = Color(0xFF9575CD),
+            darkPrimary = Color(0xFFB39DDB),
+            lightSecondary = Color(0xFF5E35B1),
+            darkSecondary = Color(0xFF9575CD),
+            lightTertiary = blend(Color(0xFF9575CD), Color(0xFF5E35B1), 0.42f),
+            darkTertiary = blend(Color(0xFFB39DDB), Color(0xFF9575CD), 0.42f),
+            lightSurface = Color(0xFFF6F1FF),
+            darkSurface = Color(0xFF12101F),
+            lightOnSurface = Color(0xFF311B92),
+            darkOnSurface = Color(0xFFEDE7F6),
+            lightError = Color(0xFFB00020),
+            darkError = Color(0xFFCF6679)
         )
     }
 )

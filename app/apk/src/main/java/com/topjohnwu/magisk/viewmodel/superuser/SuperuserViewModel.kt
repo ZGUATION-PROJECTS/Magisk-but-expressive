@@ -11,13 +11,13 @@ import com.topjohnwu.magisk.arch.UiText
 import com.topjohnwu.magisk.arch.uiText
 import com.topjohnwu.magisk.core.AppContext
 import com.topjohnwu.magisk.core.Config
-import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.data.magiskdb.PolicyDao
 import com.topjohnwu.magisk.core.di.ServiceLocator
 import com.topjohnwu.magisk.core.model.su.SuLog
 import com.topjohnwu.magisk.core.model.su.SuPolicy
 import com.topjohnwu.magisk.core.repository.LogRepository
 import com.topjohnwu.magisk.core.su.SuEvents
+import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -46,13 +46,14 @@ data class PolicyUiItem(
     val expanded: Boolean = false
 ) {
     val title: String
-        get() = if (isSharedUid) AppContext.getString(CoreR.string.shared_uid_label, appName) else appName
+        get() = if (isSharedUid) AppContext.getString(
+            CoreR.string.shared_uid_label, appName
+        ) else appName
     val showSlider: Boolean get() = Config.suRestrict || policy == SuPolicy.RESTRICT
 }
 
 data class SuperuserUiState(
-    val loading: Boolean = true,
-    val items: List<PolicyUiItem> = emptyList()
+    val loading: Boolean = true, val items: List<PolicyUiItem> = emptyList()
 )
 
 class SuperuserViewModel(
@@ -71,8 +72,7 @@ class SuperuserViewModel(
 
     init {
         reload(force = true)
-        @OptIn(kotlinx.coroutines.FlowPreview::class)
-        viewModelScope.launch {
+        @OptIn(kotlinx.coroutines.FlowPreview::class) viewModelScope.launch {
             SuEvents.policyChanged.debounce(400).collect { reload(force = true) }
         }
     }
@@ -96,13 +96,11 @@ class SuperuserViewModel(
 
     private suspend fun loadPolicies(previousByKey: Map<String, PolicyUiItem>): List<PolicyUiItem> =
         withContext(Dispatchers.IO) {
-            if (!Info.showSuperUser) return@withContext emptyList()
+            if (!MagiskRuntimeEngine.snapshot().canShowSuperuser) return@withContext emptyList()
             policyDao.deleteOutdated()
             policyDao.delete(AppContext.applicationInfo.uid)
             val previousByUid = previousByKey.values.groupBy { it.uid }
-            val latestLogsByUid = logRepo.fetchSuLogs()
-                .asSequence()
-                .distinctBy { it.fromUid }
+            val latestLogsByUid = logRepo.fetchSuLogs().asSequence().distinctBy { it.fromUid }
                 .associateBy { it.fromUid }
             val policies = mutableListOf<PolicyUiItem>()
             for (policy in policyDao.fetchAll()) {
@@ -242,20 +240,14 @@ class SuperuserViewModel(
         notification: Boolean = this.notification,
         logging: Boolean = this.logging
     ) = SuPolicy(
-        uid = uid,
-        policy = policy,
-        remain = remain,
-        notification = notification,
-        logging = logging
+        uid = uid, policy = policy, remain = remain, notification = notification, logging = logging
     )
 
     private fun SuLog.toPolicyItem(policy: SuPolicy): PolicyUiItem {
         val fallbackName = AppContext.getString(CoreR.string.uid_label, policy.uid)
         val resolvedPackage = packageName.takeUnless { it.isBlank() } ?: fallbackName
         val resolvedAppName = appName.takeUnless { it.isBlank() } ?: resolvedPackage
-        val iconPackage = resolvedPackage
-            .takeUnless { it == fallbackName }
-            ?.substringBefore(":")
+        val iconPackage = resolvedPackage.takeUnless { it == fallbackName }?.substringBefore(":")
         return PolicyUiItem(
             uid = policy.uid,
             packageName = resolvedPackage,
@@ -274,11 +266,8 @@ class SuperuserViewModel(
 
         val Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return SuperuserViewModel(
-                    ServiceLocator.policyDB,
-                    ServiceLocator.logRepo,
-                    AppContext.packageManager
+                @Suppress("UNCHECKED_CAST") return SuperuserViewModel(
+                    ServiceLocator.policyDB, ServiceLocator.logRepo, AppContext.packageManager
                 ) as T
             }
         }

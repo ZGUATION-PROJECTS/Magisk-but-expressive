@@ -1,13 +1,26 @@
 package com.topjohnwu.magisk.ui.component
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
@@ -25,6 +38,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.topjohnwu.magisk.ui.component.card.MagiskCard
+import com.topjohnwu.magisk.ui.motion.MagiskAnimatedVisibility
 
 object MagiskListItemDefaults {
     val ContainerColor: Color
@@ -40,15 +55,27 @@ fun MagiskListItem(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     leadingIcon: ImageVector? = null,
+    leadingContent: (@Composable () -> Unit)? = null,
     selected: Boolean = false,
     enabled: Boolean = true,
+    clickCenterOnly: Boolean = false,
     trailingContent: (@Composable RowScope.() -> Unit)? = null,
     onClick: (() -> Unit)? = null
 ) {
-    val clickModifier = if (onClick == null) {
+    val clickModifier = if (onClick == null || clickCenterOnly) {
         modifier
     } else {
-        modifier.clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+        modifier
+            .clip(MagiskComponentDefaults.ControlShape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+    }
+
+    val centerClickModifier = if (clickCenterOnly && onClick != null) {
+        Modifier
+            .clip(MagiskComponentDefaults.ControlShape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+    } else {
+        Modifier
     }
 
     ListItem(
@@ -59,30 +86,44 @@ fun MagiskListItem(
             } else {
                 MagiskListItemDefaults.ContainerColor
             },
-            headlineColor = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
-            supportingColor = MaterialTheme.colorScheme.onSurfaceVariant
+            headlineColor = if (enabled) MagiskComponentDefaults.PrimaryText else MaterialTheme.colorScheme.outline,
+            supportingColor = MagiskComponentDefaults.SecondaryText
         ),
-        leadingContent = leadingIcon?.let {
+        leadingContent = leadingContent ?: leadingIcon?.let {
             { MagiskIconBadge(icon = it) }
         },
         headlineContent = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
-        supportingContent = subtitle?.let {
-            {
+            Column(modifier = centerClickModifier) {
                 Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (clickCenterOnly && subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
+        },
+        supportingContent = if (!clickCenterOnly) {
+            subtitle?.let {
+                {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        } else {
+            null
         },
         trailingContent = trailingContent?.let {
             {
@@ -91,8 +132,7 @@ fun MagiskListItem(
                     content = it
                 )
             }
-        }
-    )
+        })
 }
 
 @Composable
@@ -121,10 +161,8 @@ fun MagiskSwitchItem(
                     { Icon(Icons.Rounded.Check, contentDescription = null) }
                 } else {
                     null
-                }
-            )
-        }
-    )
+                })
+        })
 }
 
 @Composable
@@ -135,10 +173,16 @@ fun MagiskExpandableListItem(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     leadingIcon: ImageVector? = null,
+    leadingContent: (@Composable () -> Unit)? = null,
+    clickCenterOnly: Boolean = false,
     headerTrailingContent: (@Composable RowScope.() -> Unit)? = null,
     expandedContent: @Composable ColumnScope.() -> Unit
 ) {
-    MagiskCard(modifier = modifier.fillMaxWidth()) {
+    MagiskCard(
+        modifier = modifier.fillMaxWidth(),
+        containerColor = MagiskComponentDefaults.CardContainer,
+        border = MagiskComponentDefaults.CardBorder
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -148,22 +192,140 @@ fun MagiskExpandableListItem(
                 title = title,
                 subtitle = subtitle,
                 leadingIcon = leadingIcon,
+                leadingContent = leadingContent,
                 onClick = onClick,
+                clickCenterOnly = clickCenterOnly,
                 trailingContent = {
                     headerTrailingContent?.invoke(this)
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MagiskComponentDefaults.SecondaryIconTint
                     )
-                }
-            )
-            if (expanded) {
+                })
+            MagiskAnimatedVisibility(visible = expanded) {
                 Column(
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     content = expandedContent
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun MagiskLanguageItem(
+    name: String,
+    langCode: String,
+    subtitle: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    MagiskCard(
+        modifier = modifier.fillMaxWidth(),
+        onClick = onClick,
+        containerColor = if (selected) {
+            MagiskComponentDefaults.PrimaryIconTint.copy(alpha = 0.12f)
+        } else {
+            MagiskComponentDefaults.CardContainer
+        },
+        border = if (selected) {
+            BorderStroke(1.dp, MagiskComponentDefaults.PrimaryIconTint)
+        } else {
+            MagiskComponentDefaults.CardBorder
+        }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Circular leading badge with 2/3-letter language code (Compact: 36.dp)
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = if (selected) {
+                                listOf(
+                                    MagiskComponentDefaults.PrimaryIconTint,
+                                    MagiskComponentDefaults.PrimaryIconTint.copy(alpha = 0.8f)
+                                )
+                            } else {
+                                listOf(
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+                                )
+                            }
+                        ),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = langCode,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MagiskComponentDefaults.SecondaryText
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Text content: Name and Subtitle
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (selected) {
+                        MagiskComponentDefaults.PrimaryIconTint
+                    } else {
+                        MagiskComponentDefaults.PrimaryText
+                    }
+                )
+                Spacer(modifier = Modifier.height(1.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MagiskComponentDefaults.SecondaryText
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Custom selector badge indicator (Compact: 20.dp)
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .background(
+                        color = if (selected) MagiskComponentDefaults.PrimaryIconTint else Color.Transparent,
+                        shape = CircleShape
+                    )
+                    .border(
+                        width = 2.dp,
+                        color = if (selected) MagiskComponentDefaults.PrimaryIconTint else MaterialTheme.colorScheme.outlineVariant,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (selected) {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
             }
         }
     }

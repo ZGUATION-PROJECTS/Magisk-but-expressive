@@ -30,6 +30,9 @@ android {
 
 dependencies {
     implementation(project(":core"))
+    implementation(libs.navigation.runtime.ktx)
+    implementation(libs.runtime)
+    implementation(libs.ui.text)
     coreLibraryDesugaring(libs.jdk.libs)
 
     // Compose
@@ -42,10 +45,13 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.compose.material3)
+    implementation(libs.iconsax.compose)
+    implementation(libs.material.kolor)
+    implementation(libs.haze.jetpack.compose)
+    implementation(libs.backdrop)
 
     // Navigation
-    implementation(libs.navigation3.runtime)
-    implementation(libs.navigation3.ui)
+    implementation(libs.navigation.compose)
 
     // UI assets / network
     implementation(libs.coil.compose)

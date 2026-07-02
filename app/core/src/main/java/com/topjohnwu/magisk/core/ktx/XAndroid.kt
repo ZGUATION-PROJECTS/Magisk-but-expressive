@@ -35,6 +35,7 @@ import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.core.R
 import com.topjohnwu.magisk.core.utils.LocaleSetting
 import com.topjohnwu.magisk.core.utils.RootUtils
+import com.topjohnwu.magisk.view.SystemToastManager
 import com.topjohnwu.magisk.utils.APKInstall
 import com.topjohnwu.superuser.internal.UiThreadHandler
 import java.io.File
@@ -153,18 +154,11 @@ fun Context.selfLaunchIntent(): Intent {
 
 @Suppress("DEPRECATION")
 fun Context.toast(msg: CharSequence, duration: Int) {
-    UiThreadHandler.run {
-        Toast(applicationContext).apply {
-            this.duration = duration
-            view = makeMagiskToastView(msg)
-            setGravity(Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, magiskToastYOffset())
-            show()
-        }
-    }
+    SystemToastManager.show(this, msg, duration)
 }
 
 fun Context.toast(resId: Int, duration: Int) {
-    toast(getText(resId), duration)
+    SystemToastManager.show(this, resId, duration)
 }
 
 private fun Context.makeMagiskToastView(msg: CharSequence): View {

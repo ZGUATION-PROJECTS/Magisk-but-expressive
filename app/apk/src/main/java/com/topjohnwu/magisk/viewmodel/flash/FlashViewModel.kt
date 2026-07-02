@@ -12,7 +12,6 @@ import com.topjohnwu.magisk.arch.UiText
 import com.topjohnwu.magisk.arch.uiText
 import com.topjohnwu.magisk.core.AppContext
 import com.topjohnwu.magisk.core.Const
-import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.ktx.timeFormatStandard
 import com.topjohnwu.magisk.core.ktx.toTime
 import com.topjohnwu.magisk.core.ktx.writeTo
@@ -21,6 +20,7 @@ import com.topjohnwu.magisk.core.utils.MediaStoreUtils
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils.displayName
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils.inputStream
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils.outputStream
+import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -41,7 +41,7 @@ import com.topjohnwu.magisk.core.R as CoreR
 data class FlashUiState(
     val running: Boolean = false,
     val success: Boolean = false,
-    val showReboot: Boolean = Info.isRooted
+    val showReboot: Boolean = MagiskRuntimeEngine.snapshot().isRooted
 )
 
 class FlashViewModel : ViewModel() {
@@ -62,9 +62,15 @@ class FlashViewModel : ViewModel() {
         if (started) return
         started = true
         viewModelScope.launch {
-            _state.update { it.copy(running = true, success = false, showReboot = Info.isRooted) }
-            if (requiresRoot(action)) {
-                val hasRoot = withContext(Dispatchers.IO) { Shell.getShell().isRoot }
+            _state.update {
+                it.copy(
+                    running = true,
+                    success = false,
+                    showReboot = MagiskRuntimeEngine.snapshot().isRooted
+                )
+            }
+            if (MagiskRuntimeEngine.requiresRoot(action)) {
+                val hasRoot = MagiskRuntimeEngine.hasRootShell()
                 if (!hasRoot) {
                     terminal.addLine("! ${AppContext.getString(CoreR.string.root_required_operation)}")
                     _state.update { it.copy(running = false, success = false, showReboot = false) }
@@ -78,19 +84,23 @@ class FlashViewModel : ViewModel() {
                     _state.update { it.copy(showReboot = false) }
                     MagiskInstaller.Uninstall(terminal.console, terminal.logs).exec()
                 }
-                Const.Value.FLASH_MAGISK -> if (Info.isEmulator) {
+
+                Const.Value.FLASH_MAGISK -> if (MagiskRuntimeEngine.snapshot().isEmulator) {
                     MagiskInstaller.Emulator(terminal.console, terminal.logs).exec()
                 } else {
                     MagiskInstaller.Direct(terminal.console, terminal.logs).exec()
                 }
+
                 Const.Value.FLASH_INACTIVE_SLOT -> {
                     _state.update { it.copy(showReboot = false) }
                     MagiskInstaller.SecondSlot(terminal.console, terminal.logs).exec()
                 }
+
                 Const.Value.PATCH_FILE -> if (uri == null) false else {
                     _state.update { it.copy(showReboot = false) }
                     MagiskInstaller.Patch(uri, terminal.console, terminal.logs).exec()
                 }
+
                 else -> false
             }
             terminal.sync()
@@ -105,19 +115,32 @@ class FlashViewModel : ViewModel() {
                 installDir.deleteRecursively()
                 installDir.mkdirs()
 
-                val zipFile = if (uri.scheme == "file") {
-                    uri.toFile()
-                } else {
-                    File(installDir, "install.zip").also {
-                        try {
-                            uri.inputStream().writeTo(it)
-                        } catch (e: IOException) {
-                            val message = if (e is FileNotFoundException) {
-                                CoreR.string.flash_invalid_uri
-                            } else {
-                                CoreR.string.flash_copy_to_cache_failed
+                val zipFile = when (uri.scheme) {
+                    "file" -> uri.toFile()
+                    "http", "https" -> {
+                        File(installDir, "install.zip").also {
+                            try {
+                                java.net.URL(uri.toString()).openStream().use { input ->
+                                    input.writeTo(it)
+                                }
+                            } catch (e: IOException) {
+                                return@withContext CoreR.string.flash_copy_to_cache_failed to null
                             }
-                            return@withContext message to null
+                        }
+                    }
+
+                    else -> {
+                        File(installDir, "install.zip").also {
+                            try {
+                                uri.inputStream().writeTo(it)
+                            } catch (e: IOException) {
+                                val message = if (e is FileNotFoundException) {
+                                    CoreR.string.flash_invalid_uri
+                                } else {
+                                    CoreR.string.flash_copy_to_cache_failed
+                                }
+                                return@withContext message to null
+                            }
                         }
                     }
                 }
@@ -144,9 +167,7 @@ class FlashViewModel : ViewModel() {
 
         val success = withContext(Dispatchers.IO) {
             Shell.cmd("sh $dir/update-binary dummy 1 '${zipFile.absolutePath}'")
-                .to(terminal.console, terminal.logs)
-                .exec()
-                .isSuccess
+                .to(terminal.console, terminal.logs).exec().isSuccess
         }
         if (!success) terminal.addLine(errorLine(CoreR.string.flash_installation_failed))
 
@@ -175,20 +196,12 @@ class FlashViewModel : ViewModel() {
         _effects.tryEmit(UiEffect.Reboot)
     }
 
-    private fun requiresRoot(action: String): Boolean =
-        action == Const.Value.FLASH_ZIP ||
-            action == Const.Value.UNINSTALL ||
-            action == Const.Value.FLASH_MAGISK ||
-            action == Const.Value.FLASH_INACTIVE_SLOT
-
-    private fun errorLine(@StringRes res: Int): String =
-        "! ${AppContext.getString(res)}"
+    private fun errorLine(@StringRes res: Int): String = "! ${AppContext.getString(res)}"
 
     companion object {
         val Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return FlashViewModel() as T
+                @Suppress("UNCHECKED_CAST") return FlashViewModel() as T
             }
         }
     }
