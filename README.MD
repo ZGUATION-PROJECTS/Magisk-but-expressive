@@ -1,22 +1,41 @@
+# Magisk-but-Expressive
+
 ## <img src="./asset/icon.gif" width="44px" /> About
 
-This repository is a fork of the official Magisk project, integrated with Magisk Alpha binaries.
+**Magisk-but-Expressive** is an independent and unofficial fork of Magisk featuring a completely rewritten Android application interface.
 
-Upstream: https://github.com/topjohnwu/Magisk
-Binaries Source: https://github.com/vvb2060/Magisk (Magisk Alpha)
+The app UI has been rebuilt using **Jetpack Compose** with a modern design inspired by **Material 3 Expressive**, while preserving compatibility with the Magisk ecosystem and its main root-management features.
+
+The project is based on the upstream Magisk source code. Release builds include native binaries extracted from builds of the independent **Magisk Alpha** project and integrated into this fork.
+
+### Project sources
+
+- **Magisk upstream:** https://github.com/topjohnwu/Magisk
+- **Magisk Alpha channel:** https://t.me/magiskalpha
+- **Magisk-but-Expressive:** https://github.com/Anto426/Magisk-but-expressive
 
 ```sh
 magisk@android:~$ whoami
-Magisk Android customization suite
+Magisk-but-Expressive
 
 magisk@android:~$ echo "platform"
 Android 6.0+ (Marshmallow and above)
 
+magisk@android:~$ echo "interface"
+Jetpack Compose + Material 3 Expressive
+
 magisk@android:~$ echo "repo"
-https://github.com/Anto426/Magisk
+https://github.com/Anto426/Magisk-but-expressive
 ```
 
-Magisk is an open-source suite for Android customization with systemless root, module support, boot image tooling, and process-level runtime extensions.
+Magisk is an open-source Android customization suite providing systemless root, module support, boot image tooling and process-level runtime extensions.
+
+Magisk-but-Expressive replaces the original application interface with a new Compose-based implementation while keeping the underlying Magisk functionality available to users.
+
+> [!IMPORTANT]
+> Magisk, Magisk Alpha and Magisk-but-Expressive are separate projects.
+>
+> Magisk-but-Expressive is not maintained, endorsed or officially supported by the developers of Magisk or Magisk Alpha.
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
@@ -24,11 +43,17 @@ Magisk is an open-source suite for Android customization with systemless root, m
 
 ## <img src="./asset/icon2.gif" width="48px" /> Highlights
 
+- Completely rewritten application interface using Jetpack Compose.
+- Modern design inspired by Material 3 Expressive.
+- Dynamic color and multiple appearance modes.
 - Systemless root and Android customization.
-- Magisk module support for extending device behavior.
+- Superuser permission management.
+- Magisk module installation and management.
 - Zygisk support for process-level runtime extensions.
-- Boot image patching and related installation tooling.
-- Open-source development based on the official Magisk project.
+- Boot image patching and installation tooling.
+- Compatibility with the Magisk module ecosystem.
+- Support for Android 6.0 and newer.
+- Open-source development based on the upstream Magisk project.
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
@@ -36,11 +61,38 @@ Magisk is an open-source suite for Android customization with systemless root, m
 
 ## Downloads
 
-Download APKs and release artifacts from:
+Download APKs and release artifacts only from the official GitHub repository:
 
-- [GitHub Releases](https://github.com/Anto426/Magisk/releases)
+- [GitHub Releases](https://github.com/Anto426/Magisk-but-expressive/releases)
 
-For installation steps, follow the official Magisk installation guide linked below.
+For installation instructions, follow the official Magisk installation guide:
+
+- [Magisk Installation Guide](https://topjohnwu.github.io/Magisk/install.html)
+
+> [!WARNING]
+> Rooting and modifying boot images may cause bootloops, instability or data loss.
+>
+> Before installing, back up your original `boot`, `init_boot` or other relevant device images and make sure you have a working recovery method.
+
+<p align="center">
+  <img src="./asset/divider.gif" width="440" height="40" />
+</p>
+
+## Binary Source and Versioning
+
+Release builds of Magisk-but-Expressive include native binaries extracted from builds of the independent Magisk Alpha project.
+
+These binaries were integrated independently into this fork. They were not specifically provided or officially distributed by the Magisk Alpha developers for use in Magisk-but-Expressive.
+
+The project version follows the corresponding Magisk Alpha binary build, for example:
+
+```text
+e8a58776-alpha
+```
+
+This version identifier represents the integrated Magisk Alpha binary revision. It does not indicate the development maturity of the Magisk-but-Expressive interface.
+
+Keeping the app, stub, daemon and native components synchronized is important for correct operation. Arbitrarily changing the version or mixing components from different builds may result in incompatibilities or unexpected behaviour.
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
@@ -49,16 +101,15 @@ For installation steps, follow the official Magisk installation guide linked bel
 ## <img src="./asset/icon2.gif" width="48px" /> Screenshots
 
 <p align="center">
-  <img src="./asset/images/Screenshot_20260702-180512_Magisk.png" alt="Screenshot 1" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180515_Magisk.png" alt="Screenshot 2" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180518_Magisk.png" alt="Screenshot 3" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180520_Magisk.png" alt="Screenshot 4" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180535_Magisk.png" alt="Screenshot 5" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180542_Magisk.png" alt="Screenshot 6" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180554_Magisk.png" alt="Screenshot 7" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180719_Magisk.png" alt="Screenshot 8" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180737_Magisk.png" alt="Screenshot 9" width="240" />
-
+  <img src="./asset/images/Screenshot_20260702-180512_Magisk.png" alt="Magisk-but-Expressive home screen" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180515_Magisk.png" alt="Magisk-but-Expressive screen 2" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180518_Magisk.png" alt="Magisk-but-Expressive screen 3" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180520_Magisk.png" alt="Magisk-but-Expressive screen 4" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180535_Magisk.png" alt="Magisk-but-Expressive screen 5" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180542_Magisk.png" alt="Magisk-but-Expressive screen 6" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180554_Magisk.png" alt="Magisk-but-Expressive screen 7" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180719_Magisk.png" alt="Magisk-but-Expressive screen 8" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180737_Magisk.png" alt="Magisk-but-Expressive screen 9" width="240" />
 </p>
 
 <p align="center">
@@ -67,10 +118,12 @@ For installation steps, follow the official Magisk installation guide linked bel
 
 ## Useful Links
 
-- [Installation Instructions](https://topjohnwu.github.io/Magisk/install.html)
-- [Building and Development Docs](https://topjohnwu.github.io/Magisk/build.html)
+- [Magisk Installation Instructions](https://topjohnwu.github.io/Magisk/install.html)
+- [Magisk Building and Development Documentation](https://topjohnwu.github.io/Magisk/build.html)
 - [Magisk Documentation](https://topjohnwu.github.io/Magisk/)
 - [Zygisk Module Sample](https://github.com/topjohnwu/zygisk-module-sample)
+- [Magisk Alpha Repository](https://github.com/vvb2060/Magisk)
+- [Magisk Alpha Telegram Channel](https://t.me/magiskalpha)
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
@@ -83,126 +136,172 @@ For installation steps, follow the official Magisk installation guide linked bel
 Supported platforms:
 
 - Linux x64
-- macOS x64 (Intel)
-- macOS arm64 (Apple Silicon)
+- macOS x64
+- macOS arm64
 - Windows x64
 
-Windows only: enable Developer Mode. Symbolic link support is required.
+On Windows, enable Developer Mode because symbolic link support is required.
 
-Install Python 3.8+:
+### Install Python
 
-- On Unix, install `python3` with your preferred package manager.
-- On Windows, install the latest Python from the official website.
-- On Windows, make sure `Add Python to PATH` is enabled during installation.
-- Optional on Windows: install `colorama` with `pip install colorama`.
+Install Python 3.8 or newer.
 
-Install Git:
+- On Unix-based systems, install `python3` using your preferred package manager.
+- On Windows, install Python from the official Python website.
+- On Windows, enable **Add Python to PATH** during installation.
+- Optionally install `colorama`:
 
-- On Unix, install `git` with your preferred package manager.
-- On Windows, install the latest Git from the official website.
-- On Windows, enable symbolic links during Git installation.
+```sh
+pip install colorama
+```
+
+### Install Git
+
+- On Unix-based systems, install `git` using your preferred package manager.
+- On Windows, install Git from the official Git website.
+- On Windows, enable symbolic link support during installation.
+
+### Install Android Studio
 
 Install Android Studio and complete the initial setup wizard.
 
-Set `ANDROID_HOME` to your Android SDK path (available in Android Studio settings).
+Set `ANDROID_HOME` to your Android SDK directory. The SDK path is available in the Android Studio settings.
 
-Set up JDK:
+### Configure the JDK
 
-- Recommended: set `ANDROID_STUDIO` to your Android Studio install path; build scripts will auto-detect and use the bundled JDK.
-- Alternative: set up JDK 21 manually.
+Recommended configuration:
 
-Clone sources:
+- Set `ANDROID_STUDIO` to the Android Studio installation directory.
+- The build scripts will automatically detect and use the bundled JDK.
+
+Alternatively, configure JDK 21 manually.
+
+### Clone the Repository
 
 ```sh
-git clone --recurse-submodules https://github.com/Anto426/Magisk.git
+git clone --recurse-submodules https://github.com/Anto426/Magisk-but-expressive.git
+cd Magisk-but-expressive
 ```
 
-Install NDK via build script:
+### Install the NDK
 
 ```sh
 ./build.py ndk
 ```
 
+On Windows:
+
+```powershell
+python build.py ndk
+```
+
 ### Building
 
-Build everything and generate the final Magisk APK:
+Build all supported components:
 
 ```sh
 ./build.py all
 ```
 
-Build specific components by running:
+On Windows:
+
+```powershell
+python build.py all
+```
+
+Display the available build actions:
 
 ```sh
 ./build.py
 ```
 
-Use `-h` for action-level help:
+Display help for a specific action:
 
 ```sh
 ./build.py binary -h
 ```
 
-Configure build behavior with `config.prop` (`config.prop.sample` is provided).
+Build behaviour can be configured using `config.prop`.
+
+A sample configuration is available in:
+
+```text
+config.prop.sample
+```
 
 ### IDE Support
 
-Kotlin, Java, C++, and C sources are supported by Android Studio out of the box. Open this repository directly as an Android Studio project.
+Kotlin, Java, C and C++ sources are supported by Android Studio.
 
-For Rust development, see the next section.
+Open the repository directly as an Android Studio project.
 
-Before touching native code, run:
+Before modifying native code, run:
 
 ```sh
 ./build.py binary
 ```
 
-Some generated native files are created during the build process.
+Some native source files and build artifacts are generated during the build process.
 
-### Developing Rust
+<p align="center">
+  <img src="./asset/divider.gif" width="440" height="40" />
+</p>
 
-Install `rustup` (official Rust toolchain manager). The Magisk NDK package (ONDK), installed via `./build.py ndk`, already includes a complete Rust toolchain for normal Magisk builds.
+## Developing Rust
 
-For a better Rust development workflow, link ONDK's Rust toolchain in rustup:
+Install `rustup`, the official Rust toolchain manager.
+
+The Magisk NDK package, also known as ONDK, includes the Rust toolchain required for normal Magisk builds.
+
+To expose the ONDK Rust toolchain through `rustup`:
 
 ```sh
-# Link the ONDK toolchain as "magisk"
 rustup toolchain link magisk "$ANDROID_HOME/ndk/magisk/toolchains/rust"
-
-# Set it as default
 rustup default magisk
 ```
 
-For VS Code: install the `rust-analyzer` extension.
+For Visual Studio Code, install the `rust-analyzer` extension.
 
-For JetBrains IDEs (RustRover or IntelliJ Rust plugin), do this extra setup:
+For RustRover or IntelliJ with the Rust plugin, install the nightly toolchain for IDE compatibility:
 
 ```sh
-# Install nightly (used for IDE compatibility only)
 rustup toolchain install nightly
-
-# Add components that are also bundled in ONDK
 rustup +nightly component add rust-src clippy
 ```
 
-Create a wrapper Cargo bin directory:
+Create a wrapper Cargo binary directory:
 
 ```sh
-# Example path: ~/.cargo/wrapper
 ./build.py rustup ~/.cargo/wrapper
 ```
 
-Then set **Settings > Rust > Toolchain location** to that wrapper path.
+Then set the Rust toolchain location in the IDE to:
 
-### Signing and Distribution
+```text
+~/.cargo/wrapper
+```
 
-In release builds, the certificate used to sign the Magisk APK is used by Magisk's root daemon as a trusted reference. If another Magisk app is signed with a different key, it can be rejected and force-uninstalled to protect users from unverified packages.
+<p align="center">
+  <img src="./asset/divider.gif" width="440" height="40" />
+</p>
 
-For Magisk development, switch to an official debug build and reinstall Magisk to disable signature enforcement during development.
+## Signing and Distribution
 
-To distribute your own Magisk builds signed with your own keys, set signing values in `config.prop`.
+In release builds, the certificate used to sign the APK is used by the Magisk root daemon as a trusted identity.
 
-For key generation details, see Google's Android app signing documentation.
+An application signed with a different certificate may be rejected or force-uninstalled to prevent untrusted applications from controlling the root daemon.
+
+For development, use a compatible debug environment and reinstall the appropriate build when changing signing identities.
+
+To distribute builds signed with your own key, configure the signing values in:
+
+```text
+config.prop
+```
+
+For information about generating and managing signing keys, see the Android application signing documentation.
+
+Do not redistribute modified builds under the Magisk-but-Expressive name without clearly identifying the changes and the different signing identity.
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
@@ -210,11 +309,34 @@ For key generation details, see Google's Android app signing documentation.
 
 ## Bug Reports
 
-Only bug reports from debug builds are accepted.
+When reporting an issue, provide enough information to reproduce and investigate the problem.
 
-- For installation issues, upload both the boot image and install logs.
-- For Magisk issues, upload boot `logcat` or `dmesg`.
-- For app crashes, capture and upload `logcat` at crash time.
+Include:
+
+- Device manufacturer and model.
+- Android version.
+- ROM name and version.
+- Magisk-but-Expressive version.
+- Installation method.
+- Clear reproduction steps.
+- Relevant screenshots or screen recordings.
+- Complete logs.
+
+For installation problems, provide:
+
+- The original boot image when appropriate.
+- Installation logs.
+- Information about the partition that was patched.
+
+For Magisk or daemon problems, provide:
+
+- Boot `logcat`.
+- `dmesg`.
+- Magisk logs.
+
+For application crashes, capture `logcat` while reproducing the crash.
+
+Reports containing only messages such as “it does not work” may not contain enough information to be investigated.
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
@@ -222,23 +344,41 @@ Only bug reports from debug builds are accepted.
 
 ## Translation Contributions
 
-Default string resources for the Magisk app and stub APK:
+Default string resources for the main application and stub APK are located in:
 
-- `app/core/src/main/res/values/strings.xml`
-- `app/stub-res/src/main/res/values/strings.xml`
+```text
+app/core/src/main/res/values/strings.xml
+app/stub-res/src/main/res/values/strings.xml
+```
 
-Add translations in:
+Add translated resources using the appropriate Android resource directory:
 
-`[module]/src/main/res/values-[lang]/strings.xml`
+```text
+[module]/src/main/res/values-[language]/strings.xml
+```
+
+Examples:
+
+```text
+values-it/strings.xml
+values-fr/strings.xml
+values-de/strings.xml
+```
+
+Keep placeholders, formatting tags and resource names unchanged unless the source resource has also been modified.
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
 </p>
 
-## Contributors
+## Credits
 
-- [topjohnwu](https://github.com/topjohnwu) - original Magisk author.
-- [Anto426](https://github.com/Anto426) - fork maintainer.
+- [topjohnwu](https://github.com/topjohnwu) — creator and maintainer of the original Magisk project.
+- [Magisk Alpha](https://github.com/vvb2060/Magisk) — independent Magisk-based project used as the source of the integrated native binaries.
+- [Anto426](https://github.com/Anto426) — Magisk-but-Expressive maintainer and author of the rewritten application interface.
+- All upstream Magisk contributors and module developers.
+
+The mention of Magisk Alpha as a binary source does not imply endorsement, partnership or official support.
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
