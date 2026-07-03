@@ -258,13 +258,12 @@ def notes_command(args: argparse.Namespace) -> None:
     write_json(out_dir / "update.json", update)
 
     telegram_lines = [
-        f"🚀 *Magisk-but-Expressive {version}* è ora disponibile!",
+        f"🚀 *Magisk-but-Expressive {version}* is now available!",
         "",
         "📝 *Changelog:*",
         notes,
         "",
         f"📲 *Download APK:* {apk_url}",
-        "💬 *Telegram Group & Channel:* https://t.me/magiskBe",
     ]
     telegram = "\n".join(telegram_lines)
     (out_dir / "telegram.md").write_text(telegram, encoding="utf-8")
