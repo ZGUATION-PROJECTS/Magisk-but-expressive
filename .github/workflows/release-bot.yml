@@ -32,7 +32,7 @@ on:
         description: "Mark GitHub release as prerelease"
         type: boolean
         required: true
-        default: true
+        default: false
       telegram:
         description: "Send Telegram channel notification after publishing"
         type: boolean
@@ -172,7 +172,7 @@ jobs:
         shell: bash
         run: |
           if [[ -n "$TELEGRAM_BOT_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
-            python scripts/release_bot.py telegram --message release-bot/telegram.md
+            python scripts/release_bot.py telegram --message release-bot/telegram.md --photo "${{ steps.notes.outputs.release_photo }}"
           else
             echo "Telegram credentials not provided, skipping notification."
           fi

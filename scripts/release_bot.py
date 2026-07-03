@@ -222,20 +222,27 @@ def notes_command(args: argparse.Namespace) -> None:
     release_title = f"Magisk {version}"
 
     release_md = [
-        f"# {release_title}",
+        f"# 🚀 Magisk-but-Expressive {version}",
         "",
+        "Magisk-but-Expressive brings a modern Material 3 Expressive design to the trusted Magisk application.",
+        "",
+        "## 📝 Changelog",
         notes,
         "",
-        "## Build",
-        f"- MBE version: `{version}`",
+        "---",
+        "",
+        "## 🛠️ Build Details",
+        f"* **MBE Version**: `{version}` (Version Code: `{version_code}`)",
+        f"* **Native Core Version**: `{metadata.get('native_version', '')} ({metadata.get('native_version_code', '')})`",
+        f"* **Supported ABIs**: `{metadata.get('abis', '')}`",
+        f"* **Native Binaries Folder**: `{metadata.get('release_id', 'unknown')}`",
+        "",
+        "---",
+        "",
+        "## 📢 Stay Connected",
+        "* Join the [Magisk-but-Expressive Telegram Channel](https://t.me/magiskBe) for updates.",
+        "* Chat with us in the [Telegram Group](https://t.me/magiskBe)!",
     ]
-    if version_code:
-        release_md.append(f"- MBE version code: `{version_code}`")
-    release_md.extend([
-        f"- Native binaries: `{metadata.get('release_id', 'unknown')}`",
-        f"- Magisk core version: `{metadata.get('native_version', '')} ({metadata.get('native_version_code', '')})`",
-        f"- ABI: `{metadata.get('abis', '')}`",
-    ])
     (out_dir / "release.md").write_text("\n".join(release_md).rstrip() + "\n", encoding="utf-8")
 
     native_code = metadata.get("native_version_code", "")
@@ -250,11 +257,36 @@ def notes_command(args: argparse.Namespace) -> None:
     }
     write_json(out_dir / "update.json", update)
 
-    telegram = f"{release_title}\n\n{notes}\n\nAPK: {apk_url}"
-    if len(telegram) > 3900:
-        telegram = telegram[:3800].rstrip() + "\n\n... continua nelle release notes.\n" + apk_url
+    telegram_lines = [
+        f"🚀 *Magisk-but-Expressive {version}* è ora disponibile!",
+        "",
+        "📝 *Changelog:*",
+        notes,
+        "",
+        f"📲 *Download APK:* {apk_url}",
+        "💬 *Telegram Group & Channel:* https://t.me/magiskBe",
+    ]
+    telegram = "\n".join(telegram_lines)
     (out_dir / "telegram.md").write_text(telegram, encoding="utf-8")
-    github_output({"title": release_title, "update_url": note_url})
+
+    try:
+        vc_num = int(version_code)
+    except ValueError:
+        vc_num = 1
+    
+    photo_file = "release_image2.png" if vc_num % 2 == 0 else "release_image1.jpg"
+    src_photo = ROOT / "scripts" / photo_file
+    photo_output_path = ""
+    if src_photo.exists():
+        import shutil
+        shutil.copy(src_photo, out_dir / photo_file)
+        photo_output_path = f"release-bot/{photo_file}"
+
+    github_output({
+        "title": release_title,
+        "update_url": note_url,
+        "release_photo": photo_output_path
+    })
 
 
 def get_current_mbe_version() -> tuple[str, str]:
@@ -311,16 +343,84 @@ def prepare_command(args: argparse.Namespace) -> None:
     print(json.dumps(outputs, indent=2))
 
 
+def send_photo_telegram(token: str, chat_id: str, photo_path: Path, caption: str) -> None:
+    import uuid
+    import mimetypes
+    import urllib.request
+    
+    # Truncate caption to 1024 characters (Telegram API limit for sendPhoto caption)
+    if len(caption) > 1024:
+        lines = caption.splitlines()
+        footer_lines = []
+        for line in reversed(lines):
+            if any(kw in line for kw in ["Download", "APK", "Group", "Channel"]):
+                footer_lines.insert(0, line)
+        footer = "\n".join(footer_lines)
+        if footer:
+            footer = "\n\n" + footer
+        max_len = 1020 - len(footer)
+        caption = caption[:max_len].rstrip() + "..." + footer
+
+    boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
+    parts = []
+    
+    parts.append(f"--{boundary}".encode())
+    parts.append(b'Content-Disposition: form-data; name="chat_id"')
+    parts.append(b'')
+    parts.append(chat_id.encode())
+    
+    parts.append(f"--{boundary}".encode())
+    parts.append(b'Content-Disposition: form-data; name="caption"')
+    parts.append(b'')
+    parts.append(caption.encode('utf-8'))
+    
+    parts.append(f"--{boundary}".encode())
+    parts.append(b'Content-Disposition: form-data; name="parse_mode"')
+    parts.append(b'')
+    parts.append(b'Markdown')
+    
+    parts.append(f"--{boundary}".encode())
+    mime_type = mimetypes.guess_type(str(photo_path))[0] or 'application/octet-stream'
+    parts.append(f'Content-Disposition: form-data; name="photo"; filename="{photo_path.name}"'.encode())
+    parts.append(f'Content-Type: {mime_type}'.encode())
+    parts.append(b'')
+    parts.append(photo_path.read_bytes())
+    
+    parts.append(f"--{boundary}--".encode())
+    parts.append(b'')
+    
+    body = b'\r\n'.join(parts)
+    
+    url = f"https://api.telegram.org/bot{token}/sendPhoto"
+    req = urllib.request.Request(url, data=body)
+    req.add_header('Content-Type', f'multipart/form-data; boundary={boundary}')
+    req.add_header('Content-Length', str(len(body)))
+    
+    with urllib.request.urlopen(req, timeout=30) as response:
+        if response.status >= 300:
+            die(f"telegram returned HTTP {response.status}")
+
+
 def telegram_command(args: argparse.Namespace) -> None:
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
         die("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are required")
     text = Path(args.message).read_text(encoding="utf-8")
+    
+    if args.photo:
+        photo_path = Path(args.photo)
+        if photo_path.exists():
+            send_photo_telegram(token, chat_id, photo_path, text)
+            return
+        else:
+            print(f"Warning: Photo path {args.photo} not found, falling back to sendMessage")
+
     data = urllib.parse.urlencode({
         "chat_id": chat_id,
         "text": text,
         "disable_web_page_preview": "false",
+        "parse_mode": "Markdown",
     }).encode()
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     with urllib.request.urlopen(url, data=data, timeout=30) as response:
@@ -350,6 +450,7 @@ def main() -> None:
 
     telegram = sub.add_parser("telegram", help="send generated release message to Telegram")
     telegram.add_argument("--message", required=True)
+    telegram.add_argument("--photo", default="")
     telegram.set_defaults(func=telegram_command)
 
     args = parser.parse_args()
