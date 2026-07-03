@@ -4,15 +4,20 @@
 
 **Magisk-but-Expressive** is an independent and unofficial fork of Magisk featuring a completely rewritten Android application interface.
 
-The app UI has been rebuilt using **Jetpack Compose** with a modern design inspired by **Material 3 Expressive**, while preserving compatibility with the Magisk ecosystem and its main root-management features.
+The original Magisk app interface has been replaced with a new implementation built using **Jetpack Compose**, with a modern design inspired by **Material 3 Expressive**.
 
-The project is based on the upstream Magisk source code. Release builds include native binaries extracted from builds of the independent **Magisk Alpha** project and integrated into this fork.
+The project remains based on the upstream Magisk source code and preserves the main Magisk functionality, including root management, modules, Zygisk and boot image patching.
 
-### Project sources
+Release builds are packaged with precompiled native binaries independently extracted from publicly distributed **Magisk Alpha** builds.
+
+The source code used to develop the Magisk Alpha binaries is not publicly available.
+
+### Project links
 
 - **Magisk upstream:** https://github.com/topjohnwu/Magisk
 - **Magisk Alpha channel:** https://t.me/magiskalpha
-- **Magisk-but-Expressive:** https://github.com/Anto426/Magisk-but-expressive
+- **Magisk-but-Expressive repository:** https://github.com/Anto426/Magisk-but-expressive
+- **Magisk-but-Expressive Telegram channel:** https://t.me/magiskBe
 
 ```sh
 magisk@android:~$ whoami
@@ -26,11 +31,14 @@ Jetpack Compose + Material 3 Expressive
 
 magisk@android:~$ echo "repo"
 https://github.com/Anto426/Magisk-but-expressive
+
+magisk@android:~$ echo "telegram"
+https://t.me/magiskBe
 ```
 
 Magisk is an open-source Android customization suite providing systemless root, module support, boot image tooling and process-level runtime extensions.
 
-Magisk-but-Expressive replaces the original application interface with a new Compose-based implementation while keeping the underlying Magisk functionality available to users.
+Magisk-but-Expressive replaces the original Android application interface while keeping the underlying Magisk functionality available through a new Compose-based frontend.
 
 > [!IMPORTANT]
 > Magisk, Magisk Alpha and Magisk-but-Expressive are separate projects.
@@ -43,9 +51,12 @@ Magisk-but-Expressive replaces the original application interface with a new Com
 
 ## <img src="./asset/icon2.gif" width="48px" /> Highlights
 
-- Completely rewritten application interface using Jetpack Compose.
+- Completely rewritten Android application interface.
+- Built using Jetpack Compose.
 - Modern design inspired by Material 3 Expressive.
-- Dynamic color and multiple appearance modes.
+- Dynamic color support.
+- Light, dark and AMOLED appearance modes.
+- Custom color theme support.
 - Systemless root and Android customization.
 - Superuser permission management.
 - Magisk module installation and management.
@@ -61,9 +72,13 @@ Magisk-but-Expressive replaces the original application interface with a new Com
 
 ## Downloads
 
-Download APKs and release artifacts only from the official GitHub repository:
+Download Magisk-but-Expressive APKs and release artifacts only from the official GitHub repository:
 
 - [GitHub Releases](https://github.com/Anto426/Magisk-but-expressive/releases)
+
+Release announcements, project updates and important information are also published on the official Telegram channel:
+
+- [Magisk-but-Expressive Telegram Channel](https://t.me/magiskBe)
 
 For installation instructions, follow the official Magisk installation guide:
 
@@ -80,19 +95,25 @@ For installation instructions, follow the official Magisk installation guide:
 
 ## Binary Source and Versioning
 
-Release builds of Magisk-but-Expressive include native binaries extracted from builds of the independent Magisk Alpha project.
+Release builds of Magisk-but-Expressive include precompiled native binaries independently extracted from publicly distributed Magisk Alpha builds.
 
-These binaries were integrated independently into this fork. They were not specifically provided or officially distributed by the Magisk Alpha developers for use in Magisk-but-Expressive.
+The source code used to develop these Magisk Alpha binaries is not publicly available.
 
-The project version follows the corresponding Magisk Alpha binary build, for example:
+Magisk-but-Expressive does not claim ownership of the Magisk Alpha binaries and is not affiliated with the Magisk Alpha developers.
+
+The binaries were not specifically provided or officially distributed by the Magisk Alpha developers for use in this project.
+
+The Magisk-but-Expressive version follows the corresponding Magisk Alpha binary build, for example:
 
 ```text
 e8a58776-alpha
 ```
 
-This version identifier represents the integrated Magisk Alpha binary revision. It does not indicate the development maturity of the Magisk-but-Expressive interface.
+This identifier represents the Magisk Alpha build used by the application.
 
-Keeping the app, stub, daemon and native components synchronized is important for correct operation. Arbitrarily changing the version or mixing components from different builds may result in incompatibilities or unexpected behaviour.
+It does not describe the development maturity of the Magisk-but-Expressive interface and does not mean that the project itself is in its first alpha release.
+
+The application, stub, daemon and native components must remain compatible with one another. Mixing components from different versions or changing the version identifier independently may cause installation failures, incompatibilities or unexpected behaviour.
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
@@ -122,8 +143,8 @@ Keeping the app, stub, daemon and native components synchronized is important fo
 - [Magisk Building and Development Documentation](https://topjohnwu.github.io/Magisk/build.html)
 - [Magisk Documentation](https://topjohnwu.github.io/Magisk/)
 - [Zygisk Module Sample](https://github.com/topjohnwu/zygisk-module-sample)
-- [Magisk Alpha Repository](https://github.com/vvb2060/Magisk)
 - [Magisk Alpha Telegram Channel](https://t.me/magiskalpha)
+- [Magisk-but-Expressive Telegram Channel](https://t.me/magiskBe)
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
@@ -146,7 +167,7 @@ On Windows, enable Developer Mode because symbolic link support is required.
 
 Install Python 3.8 or newer.
 
-- On Unix-based systems, install `python3` using your preferred package manager.
+- On Linux and macOS, install `python3` using your preferred package manager.
 - On Windows, install Python from the official Python website.
 - On Windows, enable **Add Python to PATH** during installation.
 - Optionally install `colorama`:
@@ -157,7 +178,7 @@ pip install colorama
 
 ### Install Git
 
-- On Unix-based systems, install `git` using your preferred package manager.
+- On Linux and macOS, install `git` using your preferred package manager.
 - On Windows, install Git from the official Git website.
 - On Windows, enable symbolic link support during installation.
 
@@ -169,10 +190,9 @@ Set `ANDROID_HOME` to your Android SDK directory. The SDK path is available in t
 
 ### Configure the JDK
 
-Recommended configuration:
+The recommended configuration is to set `ANDROID_STUDIO` to the Android Studio installation directory.
 
-- Set `ANDROID_STUDIO` to the Android Studio installation directory.
-- The build scripts will automatically detect and use the bundled JDK.
+The build scripts will automatically detect and use the JDK bundled with Android Studio.
 
 Alternatively, configure JDK 21 manually.
 
@@ -184,6 +204,8 @@ cd Magisk-but-expressive
 ```
 
 ### Install the NDK
+
+On Linux or macOS:
 
 ```sh
 ./build.py ndk
@@ -197,7 +219,7 @@ python build.py ndk
 
 ### Building
 
-Build all supported components:
+Build all supported components and generate the final APK:
 
 ```sh
 ./build.py all
@@ -221,7 +243,11 @@ Display help for a specific action:
 ./build.py binary -h
 ```
 
-Build behaviour can be configured using `config.prop`.
+Build behaviour can be configured using:
+
+```text
+config.prop
+```
 
 A sample configuration is available in:
 
@@ -241,7 +267,7 @@ Before modifying native code, run:
 ./build.py binary
 ```
 
-Some native source files and build artifacts are generated during the build process.
+Some native files and generated sources are created during the build process.
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
@@ -301,7 +327,7 @@ config.prop
 
 For information about generating and managing signing keys, see the Android application signing documentation.
 
-Do not redistribute modified builds under the Magisk-but-Expressive name without clearly identifying the changes and the different signing identity.
+Do not redistribute modified builds under the Magisk-but-Expressive name without clearly identifying the modifications and the different signing identity.
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
@@ -365,7 +391,7 @@ values-fr/strings.xml
 values-de/strings.xml
 ```
 
-Keep placeholders, formatting tags and resource names unchanged unless the source resource has also been modified.
+Keep placeholders, formatting tags and resource names unchanged unless the original resource has also been modified.
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
@@ -374,11 +400,11 @@ Keep placeholders, formatting tags and resource names unchanged unless the sourc
 ## Credits
 
 - [topjohnwu](https://github.com/topjohnwu) — creator and maintainer of the original Magisk project.
-- [Magisk Alpha](https://github.com/vvb2060/Magisk) — independent Magisk-based project used as the source of the integrated native binaries.
-- [Anto426](https://github.com/Anto426) — Magisk-but-Expressive maintainer and author of the rewritten application interface.
+- [Magisk Alpha](https://t.me/magiskalpha) — source of the precompiled native binaries integrated into release builds.
+- [Anto426](https://github.com/Anto426) — Magisk-but-Expressive maintainer and author of the rewritten Jetpack Compose interface.
 - All upstream Magisk contributors and module developers.
 
-The mention of Magisk Alpha as a binary source does not imply endorsement, partnership or official support.
+The mention of Magisk Alpha as the binary source does not imply endorsement, partnership, affiliation or official support.
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
