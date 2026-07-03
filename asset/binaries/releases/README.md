@@ -1,6 +1,6 @@
 # Release binaries
 
-This directory stores extracted Magisk Alpha native binaries (and other custom binaries) by release.
+This directory stores extracted Magisk Alpha native binaries by release.
 
 Each release uses this layout:
 
@@ -18,6 +18,3 @@ Each release uses this layout:
   x86/
   x86_64/
 ```
-
-The `manifest.json` file records the source APK metadata and SHA-256 for every extracted binary.
-This directory is intended to be tracked in Git.
