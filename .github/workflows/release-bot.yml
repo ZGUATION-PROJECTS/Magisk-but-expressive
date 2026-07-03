@@ -8,9 +8,9 @@ on:
         required: false
         default: ""
       release_suffix:
-        description: "MBE suffix appended to the Magisk alpha version"
-        required: true
-        default: "mbe.1"
+        description: "MBE suffix appended to the Magisk alpha version (empty for auto-increment)"
+        required: false
+        default: ""
       version_code_offset:
         description: "Optional MBE version offset. Empty means the trailing number in release_suffix"
         required: false
@@ -27,7 +27,7 @@ on:
         description: "Create/update the GitHub release"
         type: boolean
         required: true
-        default: false
+        default: true
       prerelease:
         description: "Mark GitHub release as prerelease"
         type: boolean
@@ -37,7 +37,7 @@ on:
         description: "Send Telegram channel notification after publishing"
         type: boolean
         required: true
-        default: false
+        default: true
 
 permissions:
   contents: write
@@ -45,7 +45,7 @@ permissions:
 jobs:
   release:
     name: Build and publish APK
-    runs-on: macos-26
+    runs-on: self-hosted
     steps:
       - name: Check out
         uses: actions/checkout@v6
@@ -62,11 +62,22 @@ jobs:
         run: |
           mkdir -p release-bot
           python scripts/release_bot.py prepare \
-            --native-release-id "${{ inputs.native_release_id }}" \
-            --release-suffix "${{ inputs.release_suffix }}" \
-            --version-code-offset "${{ inputs.version_code_offset }}"
+            --native-release-id "${{ inputs.native_release_id || '' }}" \
+            --release-suffix "${{ inputs.release_suffix || '' }}" \
+            --version-code-offset "${{ inputs.version_code_offset || '' }}"
+
+      - name: Decode keystore
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        shell: bash
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release-key.jks
 
       - name: Build release APK
+        env:
+          KEYSTORE_FILE: release-key.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./build.py -vr app
 
       - name: Build debug APK
@@ -78,7 +89,7 @@ jobs:
         run: |
           set -euo pipefail
           version="${{ steps.prepare.outputs.version }}"
-          tag="${{ inputs.release_tag }}"
+          tag="${{ inputs.release_tag || '' }}"
           if [[ -z "$tag" ]]; then
             tag="v${version}"
           fi
@@ -98,11 +109,27 @@ jobs:
             --repo "${{ github.repository }}" \
             --tag "${{ steps.package.outputs.tag }}" \
             --apk-asset "${{ steps.package.outputs.apk_asset }}" \
-            --changelog "${{ inputs.changelog }}" \
+            --changelog "${{ inputs.changelog || 'docs/app_changes.md' }}" \
             --out-dir release-bot
 
+      - name: Commit and push changes
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish) }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp release-bot/update.json update.json
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          if ! git diff --exit-code update.json; then
+            git add update.json
+            git commit -m "Auto-update update.json for release ${{ steps.package.outputs.tag }}"
+            git push origin HEAD:master
+          else
+            echo "No changes in update.json to commit"
+          fi
+
       - name: Create or update GitHub release
-        if: ${{ inputs.publish }}
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish) }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -111,7 +138,7 @@ jobs:
           tag="${{ steps.package.outputs.tag }}"
           args=(release-bot/release.md release-bot/update.json "release-bot/${{ steps.package.outputs.apk_asset }}" "release-bot/${{ steps.package.outputs.debug_asset }}")
           release_flags=()
-          if [[ "${{ inputs.prerelease }}" == "true" ]]; then
+          if [[ "${{ inputs.prerelease || 'true' }}" == "true" ]]; then
             release_flags+=(--prerelease)
           else
             release_flags+=(--latest)
@@ -139,11 +166,16 @@ jobs:
           compression-level: 9
 
       - name: Notify Telegram
-        if: ${{ inputs.publish && inputs.telegram }}
+        if: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish)) && secrets.TELEGRAM_BOT_TOKEN != '' }}
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python scripts/release_bot.py telegram --message release-bot/telegram.md
+
+      - name: Clean sensitive files
+        if: always()
+        run: |
+          rm -f release-key.jks
 
       - name: Stop gradle daemon
         if: always()

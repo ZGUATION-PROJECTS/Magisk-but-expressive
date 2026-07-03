@@ -19,6 +19,7 @@ class UpdateJson(
 data class UpdateInfo(
     val version: String = "",
     val versionCode: Int = -1,
+    val clientVersionCode: Int = -1,
     val link: String = "",
     val note: String = ""
 ) : Parcelable

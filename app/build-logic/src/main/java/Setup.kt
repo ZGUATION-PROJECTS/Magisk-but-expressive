@@ -210,12 +210,17 @@ fun Project.setupAppCommon() {
 
     androidApp {
         signingConfigs {
-            Config["keyStore"]?.also {
+            val keyStore = System.getenv("KEYSTORE_FILE") ?: Config["keyStore"]
+            val keyStorePass = System.getenv("KEYSTORE_PASSWORD") ?: Config["keyStorePass"]
+            val keyAlias = System.getenv("KEY_ALIAS") ?: Config["keyAlias"]
+            val keyPass = System.getenv("KEY_PASSWORD") ?: Config["keyPass"]
+
+            if (keyStore != null) {
                 create("config") {
-                    storeFile = rootFile(it)
-                    storePassword = Config["keyStorePass"]
-                    keyAlias = Config["keyAlias"]
-                    keyPassword = Config["keyPass"]
+                    storeFile = rootFile(keyStore)
+                    storePassword = keyStorePass
+                    this.keyAlias = keyAlias
+                    keyPassword = keyPass
                 }
             }
         }
@@ -288,8 +293,8 @@ fun Project.setupMainApk() {
         defaultConfig {
             applicationId = Config.applicationId
             vectorDrawables.useSupportLibrary = true
-            versionName = Config.mbeVersionName
-            versionCode = Config.mbeVersionCode
+            versionName = Config.version
+            versionCode = Config.versionCode
             ndk {
                 abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64", "riscv64")
                 debugSymbolLevel = "FULL"

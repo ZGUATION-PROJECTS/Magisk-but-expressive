@@ -125,16 +125,14 @@ def compose_release_version(native_version: str, suffix: str) -> str:
 
 
 def release_version_code(native_code: str, suffix: str, offset: str) -> str:
-    if not native_code:
-        return ""
+    if not suffix.strip() and not offset.strip():
+        return native_code
     if offset.strip():
         bump = int(offset)
     else:
         match = re.search(r"(\d+)$", suffix)
         bump = int(match.group(1)) if match else 0
-    if not suffix.strip() and not offset.strip():
-        return native_code
-    return str(int(native_code) * 1000 + bump)
+    return f"{bump:05d}"
 
 
 def update_build_props(
@@ -244,6 +242,7 @@ def notes_command(args: argparse.Namespace) -> None:
         "magisk": {
             "version": version,
             "versionCode": int(version_code) if str(version_code).isdigit() else -1,
+            "clientVersionCode": int(native_code) if str(native_code).isdigit() else -1,
             "link": apk_url,
             "note": note_url,
         }
@@ -257,13 +256,51 @@ def notes_command(args: argparse.Namespace) -> None:
     github_output({"title": release_title, "update_url": note_url})
 
 
+def get_current_mbe_version() -> tuple[str, str]:
+    props_path = ROOT / "app" / "gradle.properties"
+    name = ""
+    code = ""
+    if props_path.exists():
+        content = props_path.read_text(encoding="utf-8")
+        for line in content.splitlines():
+            line = line.strip()
+            if line.startswith("magisk.mbeVersionName="):
+                name = line.split("=", 1)[1].strip()
+            elif line.startswith("magisk.mbeVersionCode="):
+                code = line.split("=", 1)[1].strip()
+    return name, code
+
+
 def prepare_command(args: argparse.Namespace) -> None:
     native_dir = select_native_dir(Path(args.native_dir), args.native_release_id or None)
     manifest, abis = read_native_binaries(native_dir)
     native_version = str(manifest.get("version") or manifest.get("releaseId"))
     native_code = str(manifest.get("versionCode") or manifest.get("version_code") or "")
-    release_version = compose_release_version(native_version, args.release_suffix)
-    release_code = release_version_code(native_code, args.release_suffix, args.version_code_offset)
+
+    release_suffix = args.release_suffix.strip()
+    version_code_offset = args.version_code_offset.strip()
+
+    if not release_suffix:
+        current_name, current_code = get_current_mbe_version()
+        if current_name and current_code:
+            release_version = current_name
+            release_code = current_code
+            prefix = f"{native_version}-"
+            if current_name.startswith(prefix):
+                release_suffix = current_name[len(prefix):]
+            else:
+                release_suffix = current_name
+        else:
+            release_suffix = "mbe.1"
+            release_version = compose_release_version(native_version, release_suffix)
+            release_code = release_version_code(native_code, release_suffix, version_code_offset)
+    else:
+        release_version = compose_release_version(native_version, release_suffix)
+        release_code = release_version_code(native_code, release_suffix, version_code_offset)
+    
+    args.release_suffix = release_suffix
+    args.version_code_offset = version_code_offset
+
     outputs = update_build_props(native_dir, manifest, abis, release_version, release_code)
     outputs["release_suffix"] = args.release_suffix
     metadata_path = ROOT / "release-bot" / "metadata.json"
