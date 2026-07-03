@@ -50,14 +50,19 @@ runs:
         SCCACHE_IDLE_TIMEOUT: 0
       run: |
         bash $GITHUB_ACTION_PATH/sccache.sh
-        sccache --start-server
-        sccache -z
+        export PATH="$HOME/.local/bin:$PATH"
+        sccache --start-server || echo "sccache start failed"
+        sccache -z || echo "sccache stats reset failed"
 
     - name: Show sccache stats
       uses: gacts/run-and-post-run@v1
       with:
-        run: sccache -s
-        post: sccache -s
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          sccache -s || echo "sccache stats show failed"
+        post: |
+          export PATH="$HOME/.local/bin:$PATH"
+          sccache -s || echo "sccache stats post show failed"
 
     - name: Set GRADLE_USER_HOME
       shell: bash
