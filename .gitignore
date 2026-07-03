@@ -5,6 +5,8 @@ out
 *.log
 /config.prop
 /notes.md
+/release-bot/
+__pycache__/
 
 # Built binaries
 native/out

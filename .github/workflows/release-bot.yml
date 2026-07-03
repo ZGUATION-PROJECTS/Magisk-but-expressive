@@ -1,0 +1,150 @@
+name: Release Bot
+
+on:
+  workflow_dispatch:
+    inputs:
+      native_release_id:
+        description: "Local native binary folder under asset/binaries/releases. Empty means latest by manifest versionCode"
+        required: false
+        default: ""
+      release_suffix:
+        description: "MBE suffix appended to the Magisk alpha version"
+        required: true
+        default: "mbe.1"
+      version_code_offset:
+        description: "Optional MBE version offset. Empty means the trailing number in release_suffix"
+        required: false
+        default: ""
+      release_tag:
+        description: "APK release tag. Empty means v<version>"
+        required: false
+        default: ""
+      changelog:
+        description: "Changelog file used for release notes"
+        required: true
+        default: "docs/app_changes.md"
+      publish:
+        description: "Create/update the GitHub release"
+        type: boolean
+        required: true
+        default: false
+      prerelease:
+        description: "Mark GitHub release as prerelease"
+        type: boolean
+        required: true
+        default: true
+      telegram:
+        description: "Send Telegram channel notification after publishing"
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish APK
+    runs-on: macos-26
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6
+        with:
+          submodules: "recursive"
+
+      - name: Setup environment
+        uses: ./.github/actions/setup
+        with:
+          is-asset-build: true
+
+      - name: Prepare native binaries
+        id: prepare
+        run: |
+          mkdir -p release-bot
+          python scripts/release_bot.py prepare \
+            --native-release-id "${{ inputs.native_release_id }}" \
+            --release-suffix "${{ inputs.release_suffix }}" \
+            --version-code-offset "${{ inputs.version_code_offset }}"
+
+      - name: Build release APK
+        run: ./build.py -vr app
+
+      - name: Build debug APK
+        run: ./build.py -v app
+
+      - name: Package release files
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.prepare.outputs.version }}"
+          tag="${{ inputs.release_tag }}"
+          if [[ -z "$tag" ]]; then
+            tag="v${version}"
+          fi
+          apk_asset="Magisk-v${version}.apk"
+          debug_asset="Magisk-v${version}-debug.apk"
+          cp out/app-release.apk "release-bot/${apk_asset}"
+          cp out/app-debug.apk "release-bot/${debug_asset}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "apk_asset=${apk_asset}" >> "$GITHUB_OUTPUT"
+          echo "debug_asset=${debug_asset}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release metadata
+        id: notes
+        run: |
+          python scripts/release_bot.py notes \
+            --metadata "${{ steps.prepare.outputs.metadata }}" \
+            --repo "${{ github.repository }}" \
+            --tag "${{ steps.package.outputs.tag }}" \
+            --apk-asset "${{ steps.package.outputs.apk_asset }}" \
+            --changelog "${{ inputs.changelog }}" \
+            --out-dir release-bot
+
+      - name: Create or update GitHub release
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.package.outputs.tag }}"
+          args=(release-bot/release.md release-bot/update.json "release-bot/${{ steps.package.outputs.apk_asset }}" "release-bot/${{ steps.package.outputs.debug_asset }}")
+          release_flags=()
+          if [[ "${{ inputs.prerelease }}" == "true" ]]; then
+            release_flags+=(--prerelease)
+          else
+            release_flags+=(--latest)
+          fi
+          if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release edit "$tag" \
+              --repo "${{ github.repository }}" \
+              --title "${{ steps.notes.outputs.title }}" \
+              --notes-file release-bot/release.md \
+              "${release_flags[@]}"
+            gh release upload "$tag" "${args[@]}" --repo "${{ github.repository }}" --clobber
+          else
+            gh release create "$tag" "${args[@]}" \
+              --repo "${{ github.repository }}" \
+              --title "${{ steps.notes.outputs.title }}" \
+              --notes-file release-bot/release.md \
+              "${release_flags[@]}"
+          fi
+
+      - name: Upload runner artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-bot-${{ steps.package.outputs.tag }}
+          path: release-bot
+          compression-level: 9
+
+      - name: Notify Telegram
+        if: ${{ inputs.publish && inputs.telegram }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/release_bot.py telegram --message release-bot/telegram.md
+
+      - name: Stop gradle daemon
+        if: always()
+        run: ./app/gradlew --stop
