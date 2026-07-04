@@ -122,15 +122,15 @@ The application, stub, daemon and native components must remain compatible with 
 ## <img src="./asset/icon2.gif" width="48px" /> Screenshots
 
 <p align="center">
-  <img src="./asset/images/Screenshot_20260702-180512_Magisk.png" alt="Magisk-but-Expressive home screen" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180515_Magisk.png" alt="Magisk-but-Expressive screen 2" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180518_Magisk.png" alt="Magisk-but-Expressive screen 3" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180520_Magisk.png" alt="Magisk-but-Expressive screen 4" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180535_Magisk.png" alt="Magisk-but-Expressive screen 5" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180542_Magisk.png" alt="Magisk-but-Expressive screen 6" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180554_Magisk.png" alt="Magisk-but-Expressive screen 7" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180719_Magisk.png" alt="Magisk-but-Expressive screen 8" width="240" />
-  <img src="./asset/images/Screenshot_20260702-180737_Magisk.png" alt="Magisk-but-Expressive screen 9" width="240" />
+  <img src="./asset/images/Screenshot_1.png" alt="Magisk-but-Expressive screen 1" width="240" />
+  <img src="./asset/images/Screenshot_2.png" alt="Magisk-but-Expressive screen 2" width="240" />
+  <img src="./asset/images/Screenshot_3.png" alt="Magisk-but-Expressive screen 3" width="240" />
+  <img src="./asset/images/Screenshot_4.png" alt="Magisk-but-Expressive screen 4" width="240" />
+  <img src="./asset/images/Screenshot_5.png" alt="Magisk-but-Expressive screen 5" width="240" />
+  <img src="./asset/images/Screenshot_6.png" alt="Magisk-but-Expressive screen 6" width="240" />
+  <img src="./asset/images/Screenshot_7.png" alt="Magisk-but-Expressive screen 7" width="240" />
+  <img src="./asset/images/Screenshot_8.png" alt="Magisk-but-Expressive screen 8" width="240" />
+  <img src="./asset/images/Screenshot_9.png" alt="Magisk-but-Expressive screen 9" width="240" />
 </p>
 
 <p align="center">
